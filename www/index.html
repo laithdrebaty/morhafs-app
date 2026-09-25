@@ -61,6 +61,9 @@
   .tag.product{background:#e6efff;color:#2257c4} .tag.sale{background:#e3f5ec;color:#0f7a4a} .tag.topup{background:#f0e9fc;color:#6a3fc4}
   .tag.balance{background:#fff1dc;color:#a8650b} .tag.stock{background:#fde7e7;color:#b83232} .tag.settings{background:#eef1f6;color:#555} .tag.system{background:#1d2433;color:#fff}
   .inp-sm{width:95px} .inp-xs{width:60px;text-align:center}
+  .form label.chk{display:flex;align-items:center;gap:8px;color:var(--text);font-size:14px;margin-top:14px;cursor:pointer;background:#f3f0fb;border-radius:8px;padding:9px 11px}
+  .form label.chk input{width:auto;margin:0;transform:scale(1.2)}
+  .form .rrow select{flex:1;min-width:0;width:auto} .form .rrow input{width:90px;flex:none}
   .chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;white-space:nowrap;border:1px solid transparent;margin:1px 0 1px 3px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chip-btn{cursor:pointer;background:#fff;border:1px solid var(--line);font:inherit;font-size:13px;padding:6px 12px;border-radius:20px;color:var(--text)}
@@ -306,7 +309,7 @@
         </select>
         <select id="stSort" onchange="renderStock()">
           <option value="name">ترتيب: الاسم</option><option value="qty">الكمية (الأقل أولاً)</option>
-          <option value="capital">رأس المال (الأعلى أولاً)</option><option value="sold">الأكثر مبيعاً هذا الشهر</option><option value="stale">الأقدم بيعاً (راكد)</option>
+          <option value="capital">رأس المال (الأعلى أولاً)</option><option value="sold">الأكثر مبيعاً هذا الشهر</option><option value="stale">الأقدم بيعاً (راكد)</option><option value="days">ينفد أولاً</option>
         </select>
         <button class="btn" id="stPrintBtn" onclick="printStock()">🖨 طباعة</button>
       </div>
@@ -314,7 +317,7 @@
     <div class="grid stats" id="stStats" style="margin-bottom:16px"></div>
     <div class="card tbl-wrap">
       <table>
-        <thead><tr><th>المنتج</th><th>الصنف</th><th>الكمية</th><th>الحالة</th><th>سعر التكلفة</th><th>رأس المال</th><th>سعر البيع</th><th>قيمة البيع</th><th>مباع هذا الشهر</th><th>آخر بيع</th><th></th></tr></thead>
+        <thead><tr><th>المنتج</th><th>الصنف</th><th>الكمية</th><th>الحالة</th><th>سعر التكلفة</th><th>رأس المال</th><th>سعر البيع</th><th>قيمة البيع</th><th>مباع هذا الشهر</th><th>يكفي لـ</th><th>آخر بيع</th><th></th></tr></thead>
         <tbody id="stBody"></tbody>
         <tfoot id="stFoot"></tfoot>
       </table>
@@ -386,6 +389,16 @@
           <thead><tr><th>#</th><th>المنتج</th><th>الكمية المباعة</th><th>المبيعات</th><th>رأس المال</th><th>الربح</th></tr></thead>
           <tbody id="jardSales"></tbody>
           <tfoot id="jardSalesFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>☕ استهلاك المواد في الفترة</h3>
+      <p class="muted small">كم استُهلك من كل مادة داخلة في المشروبات والمنتجات المركّبة (كاسات، بن، سكر...)، ومتوسطها اليومي، وكم يوماً يكفي المخزون الحالي بنفس المعدّل.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>المادة</th><th>المستهلك</th><th>التكلفة (بسعر اليوم)</th><th>المتوسط اليومي</th><th>المتبقي</th><th>يكفي لـ</th></tr></thead>
+          <tbody id="jardUse"></tbody>
         </table>
       </div>
     </div>
@@ -533,11 +546,28 @@
     <label>اسم المنتج *</label><input id="pName" required>
     <label>الباركود</label>
     <div class="row" style="flex-wrap:nowrap"><input id="pBarcode" placeholder="امسح أو اكتب الباركود"><button type="button" class="btn" onclick="openScanner(c=>{pBarcode.value=c},false)">📷</button></div>
+    <label class="chk"><input type="checkbox" id="pIsRecipe" onchange="toggleRecipeUI()"> 🧪 منتج مركّب — مشروب أو وصفة تُحضّر من مواد (كاسة، بن، سكر...)</label>
     <div class="pair">
-      <div><label>سعر التكلفة (الأصلي) *</label><input id="pCost" type="number" step="any" min="0" inputmode="decimal" required oninput="updatePmProfit()"></div>
+      <div id="pCostWrap"><label>سعر التكلفة للوحدة *</label><input id="pCost" type="number" step="any" min="0" inputmode="decimal" required oninput="updatePmProfit()"></div>
       <div><label>سعر البيع *</label><input id="pPrice" type="number" step="any" min="0" inputmode="decimal" required oninput="updatePmProfit()"></div>
     </div>
-    <label>الكمية في المخزون</label><input id="pQty" type="number" step="any" inputmode="decimal" value="0" oninput="updatePmProfit()">
+    <div id="pQtyWrap">
+      <div class="pair">
+        <div><label>الكمية في المخزون</label><input id="pQty" type="number" step="any" inputmode="decimal" value="0" oninput="pmFromTotal();updatePmProfit()"></div>
+        <div><label>الوحدة</label><input id="pUnit" list="unitList" placeholder="قطعة"></div>
+      </div>
+      <label>أو المبلغ الإجمالي الذي دفعته لهذه الكمية (يحسب تكلفة الوحدة تلقائياً)</label>
+      <input id="pTotal" type="number" step="any" min="0" inputmode="decimal" placeholder="مثال: كيلو بن = 1000 غرام بـ 150000" oninput="pmFromTotal();updatePmProfit()">
+    </div>
+    <div id="pRecipeWrap" style="display:none">
+      <label>المكوّنات لكل واحدة (مثلاً: كاسة كرتون ×1، بن ×8 غرام، سكر ×10 غرام)</label>
+      <div id="pRecipeRows"></div>
+      <button type="button" class="btn" style="margin-top:8px" onclick="addRecipeRow()">➕ مكوّن</button>
+      <div class="note" id="pRecipeNote">المكوّنات منتجات عادية في المخزون (مثلاً «كاسة كرتون» بالقطعة و«بن» بالغرام). عند بيع هذا المنتج تُخصم مكوّناته تلقائياً، وتكلفته تُحسب منها.</div>
+    </div>
+    <label>تنبيه النفاد عندما تصبح الكمية أقل من أو تساوي (اختياري)</label>
+    <input id="pMin" type="number" step="any" min="0" inputmode="decimal" placeholder="حسب الإعدادات العامة">
+    <datalist id="unitList"><option value="قطعة"><option value="غرام"><option value="كيلو"><option value="مل"><option value="لتر"><option value="كيس"><option value="علبة"><option value="ظرف"><option value="كاسة"></datalist>
     <label>الصنف (يمكن اختيار أكثر من صنف)</label>
     <div class="chips" id="pmTags"></div>
     <div class="row" style="flex-wrap:nowrap;margin-top:8px"><input id="pNewTag" placeholder="صنف جديد، مثال: دخان" style="flex:1;min-width:0"><button type="button" class="btn" onclick="pmAddTag()">➕ صنف</button></div>
@@ -555,9 +585,10 @@
   <form class="box form" onsubmit="saveRestock(event)">
     <h2>➕ إضافة كمية للمخزون</h2>
     <div id="rsInfo" class="muted"></div>
-    <label>الكمية المضافة *</label><input id="rsQty" type="number" step="any" min="0" inputmode="decimal" required>
+    <label>الكمية المضافة *</label><input id="rsQty" type="number" step="any" min="0" inputmode="decimal" required oninput="rsFromTotal()">
+    <label>المبلغ الإجمالي المدفوع لهذه الكمية (اختياري — يحسب تكلفة الوحدة)</label><input id="rsTotal" type="number" step="any" min="0" inputmode="decimal" oninput="rsFromTotal()">
     <div class="pair">
-      <div><label>سعر التكلفة الجديد</label><input id="rsCost" type="number" step="any" min="0" inputmode="decimal" required></div>
+      <div><label>سعر التكلفة للوحدة</label><input id="rsCost" type="number" step="any" min="0" inputmode="decimal" required></div>
       <div><label>سعر البيع الجديد</label><input id="rsPrice" type="number" step="any" min="0" inputmode="decimal" required></div>
     </div>
     <div class="note">إذا تغيّر السعر، يُطبّق السعر الجديد على الفواتير القادمة فقط.</div>
@@ -659,6 +690,7 @@ function load(){
 }
 let db = load();
 function save(){
+  syncRecipes();
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }
   catch(e){ alert('تعذر حفظ البيانات! احفظ نسخة احتياطية.'); }
 }
@@ -787,7 +819,7 @@ function renderDashboard(){
   const now = new Date(), today = startOfDay(now), tomorrow = addDays(today, 1);
   const per = from => ({s:sumSales(salesBetween(from, tomorrow)), u:sumTopups(topupsBetween(from, tomorrow))});
   const t = per(today), w = per(startOfWeek(now)), m = per(startOfMonth(now));
-  const capital = db.products.reduce((a,p) => a + p.cost * Math.max(p.qty,0), 0);
+  const capital = db.products.reduce((a,p) => a + stockVal(p), 0);
   const unitsVal = db.providers.reduce((a,p) => a + p.unitCost * Math.max(p.balance,0), 0);
   const split = x => `بضاعة ${num(x.s.profit)} + وحدات ${num(x.u.profit)}`;
   $('#dashStats').innerHTML =
@@ -833,7 +865,7 @@ function renderDashboard(){
     return ts.map(x => `<div class="hbar"><div class="top"><span>${esc(x.name)}</span><b>${money(x.profit)} <span class="muted small">(${num(x.qty)} قطعة)</span></b></div>
       <div class="track"><div class="fill" style="width:${Math.max(0,x.profit)/mx*100}%;background:${x.color}"></div></div></div>`).join(''); })()
     : '<div class="muted">لا توجد مبيعات بعد هذا الشهر</div>';
-  const low = db.products.filter(p => p.qty <= db.settings.lowStock).sort((a,b)=>a.qty-b.qty);
+  const low = db.products.filter(p => p.qty <= lowOf(p)).sort((a,b)=>a.qty-b.qty);
   $('#lowStock').innerHTML = low.length
     ? '<table>' + low.slice(0,10).map(p => `<tr><td>${esc(p.name)}</td><td><span class="badge">باقي ${num(p.qty)}</span></td></tr>`).join('') + '</table>'
     : '<div class="muted">كل المنتجات متوفرة ✔</div>';
@@ -884,14 +916,18 @@ function clearCart(){ if(cart.length && confirm('إفراغ الفاتورة ا�
 
 function checkout(){
   if(!cart.length) return toast('الفاتورة فارغة');
-  const short = cart.filter(i => { const p = db.products.find(x => x.id === i.pid); return p && i.qty > p.qty; });
+  const need = {};
+  cart.forEach(i => consumption(i.pid, i.qty).forEach(c => need[c.pid] = (need[c.pid] || 0) + c.qty));
+  const short = Object.entries(need).map(([pid, q]) => ({m:prodById(pid), q})).filter(x => x.m && !x.m.recipe && x.q > x.m.qty)
+    .map(x => ({name:`${x.m.name} (المطلوب ${num(x.q)} ${unitOf(x.m)} — المتوفر ${num(x.m.qty)})`}));
   if(short.length && !confirm('تنبيه: الكمية المطلوبة أكبر من المتوفر في المخزون لـ:\n' + short.map(i=>'• '+i.name).join('\n') + '\n\nهل تريد المتابعة؟')) return;
   // كل بند يحمل سعر البيع والتكلفة وقت البيع، فتغيير الأسعار لاحقاً لا يغيّر هذه الفاتورة
-  const items = cart.map(i => ({pid:i.pid, name:i.name, barcode:i.barcode, qty:i.qty, price:i.price, cost:i.cost}));
+  const items = cart.map(i => { const p = prodById(i.pid);
+    return {pid:i.pid, name:i.name, barcode:i.barcode, qty:i.qty, price:i.price, cost:i.cost, recipe: p && p.recipe ? p.recipe.map(r => ({pid:r.pid, qty:r.qty})) : undefined}; });
   const total = r2(items.reduce((a,i)=>a+i.price*i.qty,0));
   const cost = r2(items.reduce((a,i)=>a+i.cost*i.qty,0));
   const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), items, total, cost, profit:r2(total-cost), rate:currentRate()};
-  items.forEach(i => { const p = db.products.find(x => x.id === i.pid); if(p) p.qty = r2(p.qty - i.qty); });
+  items.forEach(i => applyStock(i.pid, i.qty, i.recipe, -1));
   db.sales.push(sale);
   audit('sale', `فاتورة بيع #${sale.no}`, `الإجمالي ${num(total)} — الربح ${num(sale.profit)} — ` + items.map(i => `${i.name} ×${num(i.qty)} بسعر ${num(i.price)}`).join('، '));
   save();
@@ -1057,27 +1093,27 @@ function renderProducts(){
   const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg))
                           .sort((a,b) => a.name.localeCompare(b.name, 'ar'));
   let cap=0, val=0, exp=0, pcs=0;
-  db.products.forEach(p => { const qn = Math.max(p.qty,0); cap += p.cost*qn; val += p.price*qn; exp += (p.price-p.cost)*qn; pcs += qn; });
+  db.products.forEach(p => { if(p.recipe) return; const qn = Math.max(p.qty,0); cap += p.cost*qn; val += p.price*qn; exp += (p.price-p.cost)*qn; pcs += qn; });
   $('#prodStats').innerHTML = stat('عدد المنتجات', db.products.length) + stat('عدد القطع بالمخزون', num(pcs)) +
     stat('رأس المال (بسعر التكلفة)', money(cap), 'o') + stat('قيمة المخزون (بسعر البيع)', money(val)) + stat('الربح المتوقع', money(exp), 'g');
   const tb = $('#prodBody');
   if(!list.length){ tb.innerHTML = `<tr><td colspan="11" class="empty">${db.products.length ? 'لا توجد نتائج' : 'لا توجد منتجات بعد — اضغط «إضافة منتج»'}</td></tr>`; return; }
   tb.innerHTML = list.map(p => {
     const pr = p.price - p.cost, pct = p.cost > 0 ? pr / p.cost * 100 : 0, qn = Math.max(p.qty,0);
-    const isLow = p.qty <= db.settings.lowStock;
+    const isLow = p.qty <= lowOf(p), sells = p.price > 0, dash = '<span class="muted">—</span>';
     return `<tr class="${isLow ? 'low' : ''}">
-      <td><b>${esc(p.name)}</b></td>
+      <td><b>${esc(p.name)}</b>${p.recipe ? ` <span class="chip" style="background:#f0e9fc;color:#6a3fc4">🧪 مركّب</span><div class="muted small">${esc(recipeText(p.recipe))}</div>` : ''}</td>
       <td>${tagChips(p)}</td>
       <td class="muted small">${esc(p.barcode || '—')}</td>
-      <td>${money(p.cost)}</td>
-      <td>${money(p.price)}</td>
-      <td class="${pcls(pr)}">${money(pr)}</td>
-      <td class="${pcls(pr)}">${num(pct)}%</td>
-      <td>${num(p.qty)} ${isLow ? '<span class="badge">قليل</span>' : ''}</td>
-      <td>${money(p.cost*qn)}</td>
-      <td class="${pcls(pr)}">${money(pr*qn)}</td>
+      <td>${money(p.cost)}${p.recipe ? '<div class="muted small">من المكوّنات</div>' : (unitOf(p) !== 'قطعة' ? `<div class="muted small">لكل ${esc(unitOf(p))}</div>` : '')}</td>
+      <td>${sells ? money(p.price) : dash}</td>
+      <td class="${pcls(pr)}">${sells ? money(pr) : dash}</td>
+      <td class="${pcls(pr)}">${sells ? num(pct) + '%' : dash}</td>
+      <td>${num(p.qty)} <span class="muted small">${p.recipe ? 'يمكن تحضيرها' : esc(unitOf(p))}</span> ${isLow ? '<span class="badge">قليل</span>' : ''}</td>
+      <td>${p.recipe ? dash : money(p.cost*qn)}</td>
+      <td class="${pcls(pr)}">${sells && !p.recipe ? money(pr*qn) : dash}</td>
       <td style="white-space:nowrap">
-        <button class="btn-icon" title="إضافة كمية" onclick="openRestock('${p.id}')">➕</button>
+        ${p.recipe ? '' : `<button class="btn-icon" title="إضافة كمية" onclick="openRestock('${p.id}')">➕</button>`}
         <button class="btn-icon" title="تعديل" onclick="openProductModal('${p.id}')">✏️</button>
         <button class="btn-icon danger" title="حذف" onclick="deleteProduct('${p.id}')">🗑</button>
       </td></tr>`;
@@ -1096,6 +1132,11 @@ function openProductModal(id, preset={}){
   $('#pQty').value = p ? p.qty : 0;
   pmTagSel = new Set(p ? (p.tags || []).filter(tagById) : (preset.tag && tagById(preset.tag) ? [preset.tag] : []));
   $('#pNewTag').value = ''; renderPmTags();
+  $('#pIsRecipe').checked = !!(p && p.recipe);
+  $('#pUnit').value = p ? (p.unit || '') : ''; $('#pTotal').value = '';
+  $('#pMin').value = p && p.minQty != null ? p.minQty : '';
+  $('#pRecipeRows').innerHTML = ''; ((p && p.recipe) || []).forEach(r => addRecipeRow(r.pid, r.qty));
+  toggleRecipeUI();
   const h = (p && p.history) || [];
   $('#pmHist').innerHTML = h.length > 1
     ? `<div class="hist"><b>سجل الأسعار</b><table><tr><th>التاريخ</th><th>التكلفة</th><th>البيع</th></tr>${h.slice().reverse().map(x => `<tr><td>${fmtDateTime(x.d)}</td><td>${num(x.cost)}</td><td>${num(x.price)}</td></tr>`).join('')}</table></div>`
@@ -1105,14 +1146,53 @@ function openProductModal(id, preset={}){
   openModal('prodModal');
   focusIfDesktop($('#pName'));
 }
+function toggleRecipeUI(){
+  const on = $('#pIsRecipe').checked;
+  $('#pCostWrap').style.display = on ? 'none' : ''; $('#pCost').required = !on;
+  $('#pQtyWrap').style.display = on ? 'none' : '';
+  $('#pRecipeWrap').style.display = on ? '' : 'none';
+  if(on && !$('#pRecipeRows').children.length) addRecipeRow();
+  const hasMats = db.products.some(x => !x.recipe && x.id !== editingId);
+  $('#pRecipeNote').innerHTML = hasMats ? 'المكوّنات منتجات عادية في المخزون (مثلاً «كاسة كرتون» بالقطعة و«بن» بالغرام). عند بيع هذا المنتج تُخصم مكوّناته تلقائياً، وتكلفته تُحسب منها.'
+    : '⚠️ لا توجد مواد بعد. احفظ هذا المنتج لاحقاً، وأضف أولاً المواد كمنتجات عادية: مثلاً «كاسة كرتون» (الوحدة: قطعة) و«بن» (الوحدة: غرام) مع كمياتها وتكلفتها.';
+  updatePmProfit();
+}
+function materialOptions(sel){
+  return '<option value="">— اختر مادة —</option>' + db.products.filter(x => !x.recipe && x.id !== editingId).sort((a,b) => a.name.localeCompare(b.name,'ar'))
+    .map(m => `<option value="${m.id}" ${m.id === sel ? 'selected' : ''}>${esc(m.name)} (${esc(unitOf(m))})</option>`).join('');
+}
+function addRecipeRow(pid = '', qty = ''){
+  const d = document.createElement('div'); d.className = 'row rrow'; d.style.cssText = 'flex-wrap:nowrap;margin-top:6px';
+  d.innerHTML = `<select class="r-pid" onchange="updatePmProfit()">${materialOptions(pid)}</select>
+    <input class="r-qty" type="number" step="any" min="0" inputmode="decimal" placeholder="الكمية" value="${qty}" oninput="updatePmProfit()">
+    <span class="r-unit muted small" style="min-width:36px"></span>
+    <button type="button" class="btn-icon danger" onclick="this.parentNode.remove();updatePmProfit()">✕</button>`;
+  $('#pRecipeRows').appendChild(d);
+}
+function readRecipe(){
+  const m = {};
+  document.querySelectorAll('#pRecipeRows .rrow').forEach(r => { const pid = r.querySelector('.r-pid').value, q = parseFloat(r.querySelector('.r-qty').value); if(pid && q > 0) m[pid] = r4((m[pid] || 0) + q); });
+  return Object.entries(m).map(([pid, qty]) => ({pid, qty}));
+}
+function pmFromTotal(){ const t = parseFloat($('#pTotal').value), q = parseFloat($('#pQty').value); if(t > 0 && q > 0) $('#pCost').value = r4(t / q); }
+function rsFromTotal(){ const t = parseFloat($('#rsTotal').value), q = parseFloat($('#rsQty').value); if(t > 0 && q > 0) $('#rsCost').value = r4(t / q); }
 function updatePmProfit(){
+  if($('#pIsRecipe').checked){
+    document.querySelectorAll('#pRecipeRows .rrow').forEach(r => { const m = prodById(r.querySelector('.r-pid').value); r.querySelector('.r-unit').textContent = m ? unitOf(m) : ''; });
+    const sp = parseFloat($('#pPrice').value) || 0, rec = readRecipe(), rc = recipeCost(rec), rp = sp - rc;
+    const parts = rec.map(r => { const m = prodById(r.pid); return `${esc(m.name)}: ${num(r.qty)} ${esc(unitOf(m))} × ${num(m.cost)} = ${money(m.cost * r.qty)}`; }).join('<br>');
+    $('#pmProfit').innerHTML = (parts ? parts + '<hr style="border:0;border-top:1px solid #cfe3d6;margin:6px 0">' : '') +
+      `التكلفة (من المكوّنات): <b>${money(rc)}</b> &nbsp;|&nbsp; ربح الواحدة: <b class="${pcls(rp)}">${money(rp)}</b> &nbsp;|&nbsp; النسبة: <b class="${pcls(rp)}">${rc > 0 ? num(rp/rc*100) : 0}%</b><br>
+       يمكن تحضير: <b>${num(recipeMakeable(rec))}</b> من المخزون الحالي`;
+    return;
+  }
   const c = parseFloat($('#pCost').value) || 0, s = parseFloat($('#pPrice').value) || 0, q = parseFloat($('#pQty').value) || 0;
   const pr = s - c;
   $('#pmProfit').innerHTML = `ربح القطعة: <b class="${pcls(pr)}">${money(pr)}</b>
     &nbsp;|&nbsp; النسبة: <b class="${pcls(pr)}">${c > 0 ? num(pr/c*100) : 0}%</b><br>
     رأس المال: <b>${money(c*Math.max(q,0))}</b> &nbsp;|&nbsp; الربح المتوقع: <b class="${pcls(pr)}">${money(pr*Math.max(q,0))}</b>`;
 }
-const PFIELDS = {name:'الاسم', barcode:'الباركود', cost:'سعر التكلفة', price:'سعر البيع', qty:'الكمية', tags:'الصنف'};
+const PFIELDS = {name:'الاسم', barcode:'الباركود', cost:'سعر التكلفة', price:'سعر البيع', qty:'الكمية', unit:'الوحدة', minQty:'حد التنبيه', tags:'الصنف', recipe:'المكوّنات'};
 let pmTagSel = new Set();
 function renderPmTags(){
   $('#pmTags').innerHTML = db.tags.length ? sortedTags().map(t => {
@@ -1126,25 +1206,30 @@ $('#pNewTag').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preven
 function saveProduct(e){
   e.preventDefault();
   const name = $('#pName').value.trim(), barcode = $('#pBarcode').value.trim();
-  const cost = r2($('#pCost').value), price = r2($('#pPrice').value), qty = r2($('#pQty').value), tags = [...pmTagSel];
+  const isRecipe = $('#pIsRecipe').checked, recipe = isRecipe ? readRecipe() : undefined;
+  if(isRecipe && !recipe.length) return alert('أضف مكوّناً واحداً على الأقل مع كميته');
+  const unit = isRecipe ? undefined : ($('#pUnit').value.trim() || undefined), minQty = $('#pMin').value === '' ? undefined : r4($('#pMin').value);
+  const cost = isRecipe ? recipeCost(recipe) : r4($('#pCost').value), price = r2($('#pPrice').value), qty = isRecipe ? recipeMakeable(recipe) : r4($('#pQty').value), tags = [...pmTagSel];
   if(!name) return alert('اكتب اسم المنتج');
   if(barcode && db.products.some(x => x.barcode === barcode && x.id !== editingId)) return alert('هذا الباركود مستخدم لمنتج آخر');
-  if(price < cost && !confirm('سعر البيع أقل من سعر التكلفة (خسارة). هل أنت متأكد؟')) return;
+  if(price > 0 && price < cost && !confirm('سعر البيع أقل من سعر التكلفة (خسارة). هل أنت متأكد؟')) return;
   let p;
   if(editingId){
     p = db.products.find(x => x.id === editingId);
-    const nw = {name, barcode, cost, price, qty, tags};
-    const fv = (k, v) => k === 'tags' ? tagNames(v) : (v === '' || v == null ? '—' : v);
-    const changes = Object.keys(PFIELDS).filter(k => String(fv(k, p[k])) !== String(fv(k, nw[k]))).map(k => `${PFIELDS[k]}: من ${fv(k, p[k])} إلى ${fv(k, nw[k])}`);
-    const priceChanged = p.cost !== cost || p.price !== price;
+    const nw = {name, barcode, cost, price, qty, tags, unit, minQty, recipe};
+    const fv = (k, v) => k === 'tags' ? tagNames(v) : k === 'recipe' ? recipeText(v) : (v === '' || v == null ? '—' : v);
+    const changes = Object.keys(PFIELDS).filter(k => !(isRecipe && (k === 'cost' || k === 'qty')))
+      .filter(k => String(fv(k, p[k])) !== String(fv(k, nw[k]))).map(k => `${PFIELDS[k]}: من ${fv(k, p[k])} إلى ${fv(k, nw[k])}`);
+    const priceChanged = p.price !== price || (!isRecipe && p.cost !== cost);
     Object.assign(p, nw);
     if(priceChanged) pushHistory(p);
     if(changes.length) audit('product', (priceChanged ? 'تغيير سعر منتج: ' : 'تعديل منتج: ') + name, changes.join('، '));
   } else {
-    p = {id:uid(), name, barcode, cost, price, qty, tags, created:new Date().toISOString(), history:[]};
+    p = {id:uid(), name, barcode, cost, price, qty, tags, unit, minQty, recipe, created:new Date().toISOString(), history:[]};
     pushHistory(p);
     db.products.push(p);
-    audit('product', 'إضافة منتج: ' + name, `التكلفة ${num(cost)} — البيع ${num(price)} — الكمية ${num(qty)} — الصنف ${tagNames(tags)}${barcode ? ' — باركود ' + barcode : ''}`);
+    audit('product', (isRecipe ? 'إضافة منتج مركّب: ' : 'إضافة منتج: ') + name,
+      (isRecipe ? `المكوّنات: ${recipeText(recipe)} — التكلفة ${num(cost)}` : `التكلفة ${num(cost)} — الكمية ${num(qty)} ${unit || ''}`) + ` — البيع ${num(price)} — الصنف ${tagNames(tags)}${barcode ? ' — باركود ' + barcode : ''}`);
   }
   save();
   closeModal('prodModal');
@@ -1156,31 +1241,70 @@ let restockId = null;
 function openRestock(id){
   restockId = id;
   const p = db.products.find(x => x.id === id);
-  $('#rsInfo').innerHTML = `<b>${esc(p.name)}</b> — الكمية الحالية: ${num(p.qty)}`;
-  $('#rsQty').value = ''; $('#rsCost').value = p.cost; $('#rsPrice').value = p.price;
+  if(p.recipe) return alert(`«${p.name}» منتج مركّب — كميته تأتي من مكوّناته.\nأضف الكمية للمكوّنات: ${recipeText(p.recipe)}`);
+  $('#rsInfo').innerHTML = `<b>${esc(p.name)}</b> — الكمية الحالية: ${num(p.qty)} ${esc(unitOf(p))}`;
+  $('#rsQty').value = ''; $('#rsTotal').value = ''; $('#rsCost').value = p.cost; $('#rsPrice').value = p.price;
   openModal('restockModal'); focusIfDesktop($('#rsQty'));
 }
 function saveRestock(e){
   e.preventDefault();
   const p = db.products.find(x => x.id === restockId);
-  const q = r2($('#rsQty').value), cost = r2($('#rsCost').value), price = r2($('#rsPrice').value);
+  const q = r4($('#rsQty').value), cost = r4($('#rsCost').value), price = r2($('#rsPrice').value);
   if(!(q > 0)) return alert('اكتب الكمية');
   let det = `الكمية: من ${num(p.qty)} إلى ${num(p.qty + q)}`;
   if(cost !== p.cost) det += ` — سعر التكلفة: من ${num(p.cost)} إلى ${num(cost)}`;
   if(price !== p.price) det += ` — سعر البيع: من ${num(p.price)} إلى ${num(price)}`;
   const priceChanged = cost !== p.cost || price !== p.price;
-  p.qty = r2(p.qty + q); p.cost = cost; p.price = price;
+  p.qty = r4(p.qty + q); p.cost = cost; p.price = price;
   if(priceChanged) pushHistory(p);
   audit('product', `إضافة كمية (${num(q)}) لـ ${p.name}`, det);
   save(); closeModal('restockModal'); rerender(); toast('المخزون الآن: ' + num(p.qty));
 }
 function deleteProduct(id){
   const p = db.products.find(x => x.id === id);
-  if(!confirm(`حذف المنتج "${p.name}"؟\n(الفواتير القديمة تبقى محفوظة)`)) return;
+  const users = db.products.filter(x => (x.recipe || []).some(r => r.pid === id));
+  if(!confirm(`حذف المنتج "${p.name}"؟\n(الفواتير القديمة تبقى محفوظة)` + (users.length ? `\n\n⚠️ هذه المادة مستخدمة في: ${users.map(x => x.name).join('، ')} — ستُزال من مكوّناتها.` : ''))) return;
+  users.forEach(x => x.recipe = x.recipe.filter(r => r.pid !== id));
   db.products = db.products.filter(x => x.id !== id);
   audit('product', 'حذف منتج: ' + p.name, `الكمية وقت الحذف ${num(p.qty)} — التكلفة ${num(p.cost)} — البيع ${num(p.price)}`);
   save(); rerender();
 }
+
+/* ===================== المنتجات المركّبة (وصفات المشروبات) ===================== */
+const prodById = id => db.products.find(x => x.id === id);
+const unitOf = p => (p && p.unit) || 'قطعة';
+const lowOf = p => p.minQty != null ? p.minQty : db.settings.lowStock;
+const stockVal = p => p.recipe ? 0 : p.cost * Math.max(p.qty, 0); // المركّب لا يدخل برأس المال — مكوّناته محسوبة
+function recipeCost(rec){ return r4((rec || []).reduce((a,r) => { const m = prodById(r.pid); return a + (m ? m.cost * r.qty : 0); }, 0)); }
+function recipeMakeable(rec){
+  let n = Infinity;
+  (rec || []).forEach(r => { if(!(r.qty > 0)) return; const m = prodById(r.pid); n = Math.min(n, m ? Math.floor(Math.max(m.qty,0) / r.qty + 1e-9) : 0); });
+  return n === Infinity ? 0 : n;
+}
+function recipeText(rec){ return (rec || []).map(r => { const m = prodById(r.pid); return m ? `${m.name} ×${num(r.qty)} ${unitOf(m)}` : '؟'; }).join('، ') || '—'; }
+function syncRecipes(){ db.products.forEach(p => { if(p.recipe){ p.cost = recipeCost(p.recipe); p.qty = recipeMakeable(p.recipe); } }); }
+// ما يُخصم من المخزون عند بيع كمية: مكوّنات المركّب (حسب وصفته وقت البيع) أو المنتج نفسه
+function consumption(pid, qty, recipeSnap){
+  const p = prodById(pid), rec = recipeSnap || (p && p.recipe);
+  return rec ? rec.map(r => ({pid:r.pid, qty:r.qty * qty})) : [{pid, qty}];
+}
+function applyStock(pid, qty, recipeSnap, sign){
+  consumption(pid, qty, recipeSnap).forEach(c => { const m = prodById(c.pid); if(m && !m.recipe) m.qty = r4(m.qty + sign * c.qty); });
+}
+// استهلاك المواد في فترة: الكمية، المتوسط اليومي، وكم يوماً يكفي المخزون
+function materialUsage(from, to, onlyMaterials = true){
+  const mats = new Set(); db.products.forEach(p => (p.recipe || []).forEach(r => mats.add(r.pid)));
+  const use = {}, sales = salesBetween(from, to);
+  sales.forEach(s => s.items.forEach(i => { (i.recipe || []).forEach(r => mats.add(r.pid)); consumption(i.pid, i.qty, i.recipe).forEach(c => use[c.pid] = (use[c.pid] || 0) + c.qty); }));
+  const first = db.sales.length ? startOfDay(db.sales[0].date).getTime() : Date.now();
+  const start = Math.max(from.getTime(), first), end = Math.min(to.getTime(), Date.now());
+  const days = Math.max(1, Math.ceil((end - start) / 864e5));
+  const ids = onlyMaterials ? [...mats] : Object.keys(use);
+  return ids.map(pid => { const m = prodById(pid), u = use[pid] || 0, daily = u / days;
+    return {m, used:u, cost: m ? u * m.cost : 0, daily, left: m ? Math.max(m.qty,0) : 0, days: daily > 0 && m ? Math.max(m.qty,0) / daily : null}; })
+    .filter(x => x.m && !x.m.recipe);
+}
+function fmtDays(d){ return d == null ? '<span class="muted">—</span>' : d < 1 ? '<b class="neg">أقل من يوم</b>' : `<b class="${d < 7 ? 'neg' : ''}">~${num(Math.round(d))} يوم</b>`; }
 
 /* ===================== الأصناف ===================== */
 const TAG_COLORS = ['#2f6fed','#15935a','#d33f3f','#e08a12','#7a4fd6','#0e9aa7','#c2417a','#6b7a1f','#8a5a2b','#4b5563'];
@@ -1218,8 +1342,8 @@ function renderTags(){
   const cards = [...sortedTags().map(t => ({...t, real:true})), ...(db.products.some(p => !productTags(p).length) ? [{id:'__none', name:'بدون صنف', color:'#8a93a6'}] : [])];
   $('#tagGrid').innerHTML = cards.length ? cards.map(t => {
     const ps = db.products.filter(p => matchTag(p, t.id)), ms = month.find(x => x.id === t.id) || {qty:0, revenue:0, profit:0};
-    const pcs = ps.reduce((a,p)=>a+Math.max(p.qty,0),0), cap = ps.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0);
-    const out = ps.filter(p => p.qty <= 0).length, low = ps.filter(p => p.qty > 0 && p.qty <= db.settings.lowStock).length;
+    const pcs = ps.reduce((a,p)=>a+(p.recipe ? 0 : Math.max(p.qty,0)),0), cap = ps.reduce((a,p)=>a+stockVal(p),0);
+    const out = ps.filter(p => p.qty <= 0).length, low = ps.filter(p => p.qty > 0 && p.qty <= lowOf(p)).length;
     return `<div class="cat" style="--c:${t.color}">
       <div class="row"><span class="nm">${esc(t.name)}</span><div class="spacer"></div>
         ${out ? `<span class="badge">⛔ ${out} نافد</span>` : ''}${low ? `<span class="badge" style="background:#fff1dc;color:#a8650b">⚠️ ${low} قليل</span>` : ''}</div>
@@ -1263,7 +1387,7 @@ function deleteTag(id){
 }
 
 /* ===================== المخزون ===================== */
-function stockStatus(p){ return p.qty <= 0 ? 'out' : (p.qty <= db.settings.lowStock ? 'low' : 'ok'); }
+function stockStatus(p){ return p.qty <= 0 ? 'out' : (p.qty <= lowOf(p) ? 'low' : 'ok'); }
 const STATUS_LBL = {ok:'<span class="chip" style="background:#e3f5ec;color:#0f7a4a">✅ متوفر</span>', low:'<span class="chip" style="background:#fff1dc;color:#a8650b">⚠️ قليل</span>', out:'<span class="chip" style="background:#fde7e7;color:#b83232">⛔ نافد</span>'};
 function stockData(){
   fillTagSelect('#stTag');
@@ -1271,38 +1395,41 @@ function stockData(){
   const mStart = startOfMonth(new Date()), sold = {}, last = {};
   db.sales.forEach(s => { const d = new Date(s.date); s.items.forEach(i => { if(!last[i.pid] || d > last[i.pid]) last[i.pid] = d; if(d >= mStart) sold[i.pid] = (sold[i.pid] || 0) + i.qty; }); });
   const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg) && (!st || stockStatus(p) === st));
-  const cmp = {name:(a,b) => a.name.localeCompare(b.name,'ar'), qty:(a,b) => a.qty - b.qty, capital:(a,b) => b.cost*Math.max(b.qty,0) - a.cost*Math.max(a.qty,0),
-               sold:(a,b) => (sold[b.id]||0) - (sold[a.id]||0), stale:(a,b) => (last[a.id] || 0) - (last[b.id] || 0)};
+  const today = startOfDay(new Date()), left = {};
+  materialUsage(addDays(today, -29), addDays(today, 1), false).forEach(x => left[x.m.id] = x.days); // حسب استهلاك آخر 30 يوم
+  const dl = p => left[p.id] == null ? 1e9 : left[p.id];
+  const cmp = {name:(a,b) => a.name.localeCompare(b.name,'ar'), qty:(a,b) => a.qty - b.qty, capital:(a,b) => stockVal(b) - stockVal(a),
+               sold:(a,b) => (sold[b.id]||0) - (sold[a.id]||0), stale:(a,b) => (last[a.id] || 0) - (last[b.id] || 0), days:(a,b) => dl(a) - dl(b)};
   list.sort(cmp[sort] || cmp.name);
-  return {list, sold, last, tagName: tg ? (tg === '__none' ? 'بدون صنف' : (tagById(tg) || {}).name) : ''};
+  return {list, sold, last, left, tagName: tg ? (tg === '__none' ? 'بدون صنف' : (tagById(tg) || {}).name) : ''};
 }
 function renderStock(){
   $('#stPrintBtn').textContent = PRINT_LBL;
-  const {list, sold, last} = stockData();
+  const {list, sold, last, left} = stockData();
   let pcs = 0, cap = 0, val = 0;
-  list.forEach(p => { const qn = Math.max(p.qty,0); pcs += qn; cap += p.cost*qn; val += p.price*qn; });
+  list.forEach(p => { if(p.recipe) return; const qn = Math.max(p.qty,0); pcs += qn; cap += p.cost*qn; val += p.price*qn; });
   const out = list.filter(p => stockStatus(p) === 'out').length, low = list.filter(p => stockStatus(p) === 'low').length;
   $('#stStats').innerHTML = stat('عدد المنتجات', list.length) + stat('القطع بالمخزون', num(pcs)) + stat('رأس المال', money(cap), 'o') +
     stat('قيمة البيع', money(val)) + stat('الربح المتوقع', money(val - cap), 'g') + stat('نافد', out, 'r') + stat('قليل', low, 'o');
   $('#stBody').innerHTML = list.length ? list.map(p => { const qn = Math.max(p.qty,0), st = stockStatus(p);
     return `<tr class="${st !== 'ok' ? 'low' : ''}">
-      <td><b>${esc(p.name)}</b><div class="muted small">${esc(p.barcode || '')}</div></td>
+      <td><b>${esc(p.name)}</b>${p.recipe ? ` <span class="chip" style="background:#f0e9fc;color:#6a3fc4">🧪 مركّب</span>` : ''}<div class="muted small">${esc(p.recipe ? recipeText(p.recipe) : (p.barcode || ''))}</div></td>
       <td>${tagChips(p)}</td>
-      <td><b>${num(p.qty)}</b></td><td>${STATUS_LBL[st]}</td>
-      <td>${money(p.cost)}</td><td>${money(p.cost*qn)}</td><td>${money(p.price)}</td><td>${money(p.price*qn)}</td>
-      <td>${num(sold[p.id] || 0)}</td><td class="small muted">${last[p.id] ? fmtDate(last[p.id]) : 'لم يُبع'}</td>
-      <td style="white-space:nowrap"><button class="btn-icon" title="إضافة كمية" onclick="openRestock('${p.id}')">➕</button>
+      <td><b>${num(p.qty)}</b> <span class="muted small">${p.recipe ? 'يمكن تحضيرها' : esc(unitOf(p))}</span></td><td>${STATUS_LBL[st]}</td>
+      <td>${money(p.cost)}</td><td>${p.recipe ? '—' : money(p.cost*qn)}</td><td>${p.price > 0 ? money(p.price) : '—'}</td><td>${p.recipe || !(p.price > 0) ? '—' : money(p.price*qn)}</td>
+      <td>${num(sold[p.id] || 0)}</td><td>${fmtDays(left[p.id])}</td><td class="small muted">${last[p.id] ? fmtDate(last[p.id]) : 'لم يُبع'}</td>
+      <td style="white-space:nowrap">${p.recipe ? '' : `<button class="btn-icon" title="إضافة كمية" onclick="openRestock('${p.id}')">➕</button>`}
         <button class="btn-icon" title="تعديل" onclick="openProductModal('${p.id}')">✏️</button></td></tr>`; }).join('')
-    : `<tr><td colspan="11" class="empty">${db.products.length ? 'لا توجد منتجات تطابق الفلتر' : 'لا توجد منتجات بعد'}</td></tr>`;
-  $('#stFoot').innerHTML = list.length ? `<tr><td colspan="2">المجموع (${list.length} منتج)</td><td>${num(pcs)}</td><td></td><td></td><td>${money(cap)}</td><td></td><td>${money(val)}</td><td></td><td></td><td></td></tr>` : '';
+    : `<tr><td colspan="12" class="empty">${db.products.length ? 'لا توجد منتجات تطابق الفلتر' : 'لا توجد منتجات بعد'}</td></tr>`;
+  $('#stFoot').innerHTML = list.length ? `<tr><td colspan="2">المجموع (${list.length} منتج)</td><td>${num(pcs)}</td><td></td><td></td><td>${money(cap)}</td><td></td><td>${money(val)}</td><td></td><td></td><td></td><td></td></tr>` : '';
 }
 function printStock(){
   const {list, tagName} = stockData();
-  const cap = list.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0);
+  const cap = list.reduce((a,p)=>a+stockVal(p),0);
   printHTML(`<h2 style="text-align:center">${esc(db.settings.shopName)} — المخزون${tagName ? ' (' + esc(tagName) + ')' : ''}</h2>
     <p style="text-align:center">${fmtDateTime(new Date())} — ${list.length} منتج — رأس المال ${money(cap)}</p>
     <table><tr><th>المنتج</th><th>الصنف</th><th>الكمية</th><th>سعر التكلفة</th><th>رأس المال</th><th>سعر البيع</th><th style="width:100px">الفعلي</th></tr>
-    ${list.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(productTags(p).map(t => t.name).join('، '))}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(p.cost*Math.max(p.qty,0))}</td><td>${money(p.price)}</td><td></td></tr>`).join('')}</table>`);
+    ${list.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(productTags(p).map(t => t.name).join('، '))}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(stockVal(p))}</td><td>${money(p.price)}</td><td></td></tr>`).join('')}</table>`);
 }
 
 /* ===================== الوحدات / الرصيد ===================== */
@@ -1489,7 +1616,7 @@ function viewInvoice(id, justSaved){
 function deleteInvoice(id){
   const s = db.sales.find(x => x.id === id);
   if(!confirm(`حذف الفاتورة #${s.no}؟\nسيتم إرجاع الكميات إلى المخزون.`)) return;
-  s.items.forEach(i => { const p = db.products.find(x => x.id === i.pid); if(p) p.qty = r2(p.qty + i.qty); });
+  s.items.forEach(i => applyStock(i.pid, i.qty, i.recipe, +1));
   db.sales = db.sales.filter(x => x.id !== id);
   audit('sale', `حذف فاتورة #${s.no}`, `الإجمالي ${num(s.total)} — الربح ${num(s.profit)} — أُعيدت الكميات: ` + s.items.map(i => `${i.name} ×${num(i.qty)}`).join('، '));
   save(); renderInvoices(); toast('تم حذف الفاتورة');
@@ -1526,7 +1653,7 @@ function renderJard(){
   $('#jardPrintBtn').textContent = PRINT_LBL + ' تقرير الجرد';
   const {from, to, label, sum, ps, us, pv} = jardData();
   $('#jardRangeTxt').innerHTML = `الفترة: <b>${label}</b> — من ${fmtDate(from)} إلى ${fmtDate(addDays(to,-1))}`;
-  const capital = db.products.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0);
+  const capital = db.products.reduce((a,p)=>a+stockVal(p),0);
   $('#jardStats').innerHTML =
     stat('مبيعات البضاعة', money(sum.total), '', `${sum.count} فاتورة — ${num(sum.items)} قطعة`) +
     stat('رأس مال البضاعة المباعة', money(sum.cost), 'o') +
@@ -1545,13 +1672,17 @@ function renderJard(){
     : '<tr><td colspan="7" class="empty">لا توجد عمليات وحدات</td></tr>';
   $('#jardUnitsFoot').innerHTML = pv.length ? `<tr><td>المجموع</td><td>${us.count}</td><td>${num(us.units)}</td><td>${money(us.total)}</td><td>${money(us.cost)}</td><td>${money(us.profit)}</td><td></td></tr>` : '';
 
+  const mu = materialUsage(from, to).sort((a,b) => b.cost - a.cost);
+  $('#jardUse').innerHTML = mu.length ? mu.map(x => `<tr><td><b>${esc(x.m.name)}</b></td><td>${num(x.used)} ${esc(unitOf(x.m))}</td><td>${money(x.cost)}</td>
+      <td>${num(x.daily)} ${esc(unitOf(x.m))}</td><td>${num(x.left)} ${esc(unitOf(x.m))}</td><td>${fmtDays(x.days)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">لا توجد منتجات مركّبة بعد — عرّف المشروب كمنتج مركّب من نافذة المنتج لتظهر هنا كاساته وبنّه</td></tr>';
   fillTagSelect('#jTag');
-  const prods = db.products.filter(p => matchTag(p, $('#jTag').value)).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const prods = db.products.filter(p => !p.recipe && matchTag(p, $('#jTag').value)).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   $('#jardStock').innerHTML = prods.length ? prods.map(p => `<tr>
-      <td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(p.cost*Math.max(p.qty,0))}</td>
+      <td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(stockVal(p))}</td>
       <td><input type="number" step="any" inputmode="decimal" class="inp-sm count-inp" data-id="${p.id}" oninput="countDiff(this)"></td><td class="diff"></td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">لا توجد منتجات</td></tr>';
-  $('#jardStockFoot').innerHTML = prods.length ? `<tr><td>المجموع</td><td>${num(prods.reduce((a,p)=>a+Math.max(p.qty,0),0))}</td><td></td><td>${money(prods.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0))}</td><td></td><td id="diffTotal"></td></tr>` : '';
+  $('#jardStockFoot').innerHTML = prods.length ? `<tr><td>المجموع</td><td>${num(prods.reduce((a,p)=>a+Math.max(p.qty,0),0))}</td><td></td><td>${money(prods.reduce((a,p)=>a+stockVal(p),0))}</td><td></td><td id="diffTotal"></td></tr>` : '';
 }
 function countDiff(inp){
   const p = db.products.find(x => x.id === inp.dataset.id), cell = inp.closest('tr').querySelector('.diff');
@@ -1579,8 +1710,8 @@ function applyCount(){
 }
 function printJard(){
   const {from, to, label, sum, ps, us, pv} = jardData();
-  const prods = [...db.products].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-  const capital = prods.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0);
+  const prods = db.products.filter(p => !p.recipe).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const capital = prods.reduce((a,p)=>a+stockVal(p),0);
   printHTML(`<h2 style="text-align:center">${esc(db.settings.shopName)} — تقرير الجرد (${label})</h2>
     <p style="text-align:center">من ${fmtDate(from)} إلى ${fmtDate(addDays(to,-1))} — ${fmtDateTime(new Date())}</p>
     <table><tr><th>البند</th><th>المبيعات</th><th>التكلفة</th><th>الربح</th></tr>
@@ -1596,7 +1727,7 @@ function printJard(){
     ${pv.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.count}</td><td>${num(x.units)}</td><td>${money(x.total)}</td><td>${money(x.profit)}</td></tr>`).join('')}</table>` : ''}
     <h3 style="margin-top:18px">ورقة جرد المخزون</h3>
     <table><tr><th>المنتج</th><th>الكمية بالنظام</th><th>سعر التكلفة</th><th>رأس المال</th><th style="width:110px">الكمية الفعلية</th></tr>
-    ${prods.map(p=>`<tr><td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(p.cost*Math.max(p.qty,0))}</td><td></td></tr>`).join('')}</table>`);
+    ${prods.map(p=>`<tr><td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(stockVal(p))}</td><td></td></tr>`).join('')}</table>`);
 }
 
 /* ===================== الأرباح بعملة ثانية ===================== */
@@ -1662,7 +1793,7 @@ function renderFx(){
     u.total += t.price; u.profit += t.profit; u.fxT += toFx(t.price, r); u.fxP += toFx(t.profit, r);
     d.total += t.price; d.profit += t.profit; d.fxT += toFx(t.price, r); d.fxP += toFx(t.profit, r);
   });
-  const capital = db.products.reduce((a,p) => a + p.cost * Math.max(p.qty,0), 0);
+  const capital = db.products.reduce((a,p) => a + stockVal(p), 0);
   $('#fxStats').innerHTML =
     stat('صافي الربح الكلي', money2(g.fxP + u.fxP), 'g', `= ${money(g.profit + u.profit)}`) +
     stat('ربح البضاعة', money2(g.fxP), 'g', `= ${money(g.profit)}`) +
@@ -1777,6 +1908,17 @@ function demoData(){
     if(!p){ p = {id:uid(),name,barcode,cost,price,qty,tags:[createTag(tag).id],created:new Date().toISOString(),history:[]}; pushHistory(p); db.products.push(p); }
     return p;
   });
+  if(!db.products.some(x => x.name === 'كاسة كرتون')){
+    const raw = createTag('مواد خام').id, hot = createTag('مشروبات ساخنة').id, now = new Date().toISOString();
+    const cup = {id:uid(), name:'كاسة كرتون', barcode:'', cost:150, price:0, qty:400, unit:'قطعة', tags:[raw], created:now, history:[]};
+    const bean = {id:uid(), name:'بن اسبريسو', barcode:'', cost:60, price:0, qty:1500, unit:'غرام', tags:[raw], created:now, history:[]};
+    const sugar = {id:uid(), name:'سكر (للمشروبات)', barcode:'', cost:12, price:0, qty:3000, unit:'غرام', tags:[raw], created:now, history:[]};
+    const esp = {id:uid(), name:'قهوة اسبريسو', barcode:'2000000000015', cost:0, price:3000, qty:0, tags:[hot], created:now, history:[],
+                 recipe:[{pid:cup.id, qty:1}, {pid:bean.id, qty:8}, {pid:sugar.id, qty:10}]};
+    const dbl = {id:uid(), name:'قهوة اسبريسو دبل', barcode:'2000000000022', cost:0, price:5000, qty:0, tags:[hot], created:now, history:[],
+                 recipe:[{pid:cup.id, qty:1}, {pid:bean.id, qty:16}, {pid:sugar.id, qty:10}]};
+    db.products.push(cup, bean, sugar, esp, dbl); syncRecipes(); made.push(esp, esp, dbl);
+  }
   const provs = [['شركة أ',0.9,1.05,5000],['شركة ب',0.92,1.08,3000]].map(([name,unitCost,unitPrice,balance]) => {
     let p = db.providers.find(x=>x.name===name);
     if(!p){ p = {id:uid(),name,unitCost,unitPrice,balance,created:new Date().toISOString()}; db.providers.push(p); }
@@ -1788,7 +1930,7 @@ function demoData(){
     for(let k = 0, n = 2 + rnd(6); k < n; k++){
       const dt = addDays(today, -d); dt.setHours(9 + rnd(12), rnd(60));
       const its = [];
-      for(let j = 0, c = 1 + rnd(4); j < c; j++){ const p = made[rnd(made.length)]; if(its.some(i=>i.pid===p.id)) continue; its.push({pid:p.id,name:p.name,barcode:p.barcode,qty:1+rnd(3),price:p.price,cost:p.cost}); }
+      for(let j = 0, c = 1 + rnd(4); j < c; j++){ const p = made[rnd(made.length)]; if(its.some(i=>i.pid===p.id)) continue; its.push({pid:p.id,name:p.name,barcode:p.barcode,qty:1+rnd(3),price:p.price,cost:p.cost,recipe:p.recipe ? p.recipe.map(r => ({...r})) : undefined}); }
       const total = r2(its.reduce((a,i)=>a+i.price*i.qty,0)), cost = r2(its.reduce((a,i)=>a+i.cost*i.qty,0));
       db.sales.push({id:uid(), no:db.nextInvoice++, date:dt.toISOString(), items:its, total, cost, profit:r2(total-cost)});
     }
@@ -1825,6 +1967,7 @@ if(NATIVE && CP.App){
   });
 }
 
+syncRecipes();
 applyTitle();
 showTab('dash');
 </script>
