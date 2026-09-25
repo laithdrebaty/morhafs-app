@@ -1,0 +1,25 @@
+{
+  "name": "mahal-inventory",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "web": "node -e \"require('fs').copyFileSync('www/index.html','../جرد-المحل.html');require('fs').copyFileSync('www/scanner-engine.js','../scanner-engine.js')\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/filesystem": "^8.1.3",
+    "@capacitor/share": "^8.0.2",
+    "barcode-detector": "^3.2.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}

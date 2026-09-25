@@ -1,0 +1,8 @@
+{
+  "appId": "com.mahal.inventory",
+  "appName": "جرد المحل",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}
