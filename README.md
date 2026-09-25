@@ -2,7 +2,16 @@
 
 الكود كله في `www/index.html` (هو نفسه نسخة المتصفح). مشروع أندرويد (Capacitor 8) موجود في `android/`.
 
-## بناء ملف APK (مرة واحدة)
+## بناء APK أونلاين عبر GitHub (بدون تثبيت أي شيء)
+
+1. أنشئ حساباً مجانياً على https://github.com ثم مستودعاً جديداً **Private** (بدون README).
+2. ارفع محتويات مجلد `app` إليه (عبر GitHub Desktop، أو `git push`).
+3. يبدأ البناء تلقائياً (تبويب **Actions**) ويستغرق 3–5 دقائق.
+4. من الهاتف افتح صفحة المستودع ← **Releases** ← حمّل `jard-almahal.apk` وثبّته.
+
+كل تعديل جديد ترفعه يبني نسخة جديدة تلقائياً، وتُثبّت فوق القديمة بدون أن تضيع البيانات.
+
+## بناء ملف APK محلياً (Android Studio)
 
 1. ثبّت **Android Studio** من https://developer.android.com/studio (يأتي معه Android SDK و Java المناسب).
 2. افتح Android Studio ← **Open** ← اختر المجلد `app/android`.
