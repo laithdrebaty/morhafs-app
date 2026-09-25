@@ -150,6 +150,7 @@
     <button data-tab="products">📦 المنتجات</button>
     <button data-tab="invoices">📑 الفواتير</button>
     <button data-tab="jard">📋 الجرد</button>
+    <button data-tab="fx" id="fxTabBtn">💱 الأرباح بالدولار</button>
     <button data-tab="audit">🕵️ سجل العمليات</button>
     <button data-tab="settings">⚙️ الإعدادات</button>
   </nav>
@@ -358,6 +359,64 @@
     </div>
   </section>
 
+  <!-- ============ الأرباح بعملة ثانية ============ -->
+  <section id="tab-fx">
+    <div class="grid two">
+      <div class="card form">
+        <h3>💱 سعر الصرف</h3>
+        <div class="pair">
+          <div><label>العملة الثانية</label><input id="fxCur" placeholder="$"></div>
+          <div><label id="fxRateLbl">سعر الصرف</label><input id="fxRate" type="number" step="any" min="0" inputmode="decimal"></div>
+        </div>
+        <button class="btn p" style="margin-top:12px" onclick="saveRate()">حفظ سعر الصرف</button>
+        <div class="note">كل فاتورة وعملية وحدات تُحفظ مع سعر الصرف يوم حصولها، فتغيير السعر اليوم لا يغيّر حسابات الأيام السابقة.</div>
+        <div class="hist" id="fxHist"></div>
+      </div>
+      <div class="card">
+        <h3>طريقة التحويل</h3>
+        <div class="tabs2" id="fxModeTabs">
+          <button data-m="sale" class="active">حسب سعر الصرف يوم البيع</button>
+          <button data-m="current">حسب سعر الصرف الحالي</button>
+        </div>
+        <p class="muted small" id="fxModeTxt"></p>
+        <h3 style="margin-top:14px">الفترة</h3>
+        <div class="tabs2" id="fxTabs">
+          <button data-p="today">اليوم</button>
+          <button data-p="week">هذا الأسبوع</button>
+          <button data-p="lastWeek">الأسبوع الماضي</button>
+          <button data-p="month" class="active">هذا الشهر</button>
+          <button data-p="lastMonth">الشهر الماضي</button>
+          <button data-p="custom">فترة مخصصة</button>
+        </div>
+        <div class="row" id="fxCustom" style="display:none;margin-top:10px">
+          <label class="muted small">من</label><input type="date" id="fxFrom" onchange="renderFx()">
+          <label class="muted small">إلى</label><input type="date" id="fxTo" onchange="renderFx()">
+        </div>
+        <div class="muted" id="fxRangeTxt" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="grid stats" id="fxStats" style="margin-bottom:16px"></div>
+    <div class="card">
+      <h3>الأرباح يوماً بيوم</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead id="fxDayHead"></thead>
+          <tbody id="fxDays"></tbody>
+          <tfoot id="fxDaysFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>ربح كل منتج في الفترة</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead id="fxProdHead"></thead>
+          <tbody id="fxProds"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ سجل العمليات ============ -->
   <section id="tab-audit">
     <div class="card">
@@ -386,7 +445,7 @@
     <div class="card form" style="max-width:520px">
       <h2>الإعدادات</h2>
       <label>اسم المحل</label><input id="sName">
-      <label>العملة</label><input id="sCur" placeholder="مثال: $ أو ل.س أو ₪">
+      <label>العملة</label><input id="sCur" placeholder="ل.س">
       <label>تنبيه النفاد عندما تصبح الكمية أقل من أو تساوي</label><input id="sLow" type="number" min="0">
       <div style="margin-top:14px"><button class="btn p" onclick="saveSettings()">حفظ الإعدادات</button></div>
     </div>
@@ -525,10 +584,14 @@ const PRINT_LBL = NATIVE ? '📤 مشاركة' : '🖨 طباعة';
 const KEY = 'mahal_inventory_v1';
 const DAYS = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 function defaultDB(){
-  return {products:[], sales:[], providers:[], topups:[], charges:[], audit:[],
-          nextInvoice:1, nextTopup:1, settings:{shopName:'محلي', currency:'$', lowStock:3}};
+  return {products:[], sales:[], providers:[], topups:[], charges:[], audit:[], rates:[],
+          nextInvoice:1, nextTopup:1, settings:{shopName:'محلي', currency:'ل.س', cur2:'$', lowStock:3, curV2:1}};
 }
-function normalize(d){ const b = defaultDB(); return {...b, ...d, settings:{...b.settings, ...(d.settings||{})}}; }
+function normalize(d){
+  const b = defaultDB(), r = {...b, ...d, settings:{...b.settings, ...(d.settings||{})}};
+  if(!(d.settings||{}).curV2){ if(!r.settings.currency || r.settings.currency === '$') r.settings.currency = 'ل.س'; r.settings.curV2 = 1; } // تحويل العملة الافتراضية القديمة إلى السوري
+  return r;
+}
 function load(){
   try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d && d.products) return normalize(d); }catch(e){}
   return defaultDB();
@@ -649,7 +712,7 @@ function showTab(t){
   currentTab = t;
   document.querySelectorAll('#nav button').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('active', on); if(on) b.scrollIntoView({block:'nearest', inline:'nearest'}); });
   document.querySelectorAll('main section').forEach(s => s.classList.toggle('active', s.id === 'tab-'+t));
-  ({dash:renderDashboard, sale:renderCart, topup:renderTopup, products:renderProducts, invoices:renderInvoices, jard:renderJard, audit:()=>renderAudit(true), settings:renderSettings})[t]();
+  ({dash:renderDashboard, sale:renderCart, topup:renderTopup, products:renderProducts, invoices:renderInvoices, jard:renderJard, fx:renderFx, audit:()=>renderAudit(true), settings:renderSettings})[t]();
   if(t === 'sale') focusIfDesktop($('#saleInput'));
   window.scrollTo(0,0);
 }
@@ -758,7 +821,7 @@ function checkout(){
   const items = cart.map(i => ({pid:i.pid, name:i.name, barcode:i.barcode, qty:i.qty, price:i.price, cost:i.cost}));
   const total = r2(items.reduce((a,i)=>a+i.price*i.qty,0));
   const cost = r2(items.reduce((a,i)=>a+i.cost*i.qty,0));
-  const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), items, total, cost, profit:r2(total-cost)};
+  const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), items, total, cost, profit:r2(total-cost), rate:currentRate()};
   items.forEach(i => { const p = db.products.find(x => x.id === i.pid); if(p) p.qty = r2(p.qty - i.qty); });
   db.sales.push(sale);
   audit('sale', `فاتورة بيع #${sale.no}`, `الإجمالي ${num(total)} — الربح ${num(sale.profit)} — ` + items.map(i => `${i.name} ×${num(i.qty)} بسعر ${num(i.price)}`).join('، '));
@@ -1079,7 +1142,7 @@ function saveTopup(){
   if(units > p.balance && !confirm(`رصيدك لدى ${p.name} هو ${num(p.balance)} وحدة فقط.\nهل تريد المتابعة؟`)) return;
   const cost = r2(units * p.unitCost);
   const t = {id:uid(), no:db.nextTopup++, date:new Date().toISOString(), providerId:p.id, providerName:p.name,
-             phone:$('#tuPhone').value.trim(), note:$('#tuNote').value.trim(), units, price, cost, profit:r2(price - cost), unitCost:p.unitCost};
+             phone:$('#tuPhone').value.trim(), note:$('#tuNote').value.trim(), units, price, cost, profit:r2(price - cost), unitCost:p.unitCost, rate:currentRate()};
   p.balance = r2(p.balance - units);
   db.topups.push(t);
   audit('topup', `عملية وحدات #${t.no} — ${p.name}`, `${num(units)} وحدة — المبيع ${num(price)} — التكلفة ${num(cost)} — الربح ${num(t.profit)}${t.phone ? ' — الرقم ' + t.phone : ''} — الرصيد المتبقي ${num(p.balance)}`);
@@ -1235,16 +1298,18 @@ $('#jardTabs').addEventListener('click', e => {
   if(jardPeriod === 'custom' && !$('#jFrom').value){ $('#jFrom').value = dayKey(startOfMonth(new Date())); $('#jTo').value = dayKey(new Date()); }
   renderJard();
 });
-function jardRange(){
-  const now = new Date(), tomorrow = addDays(startOfDay(now), 1);
-  if(jardPeriod === 'week') return [startOfWeek(now), tomorrow, 'هذا الأسبوع'];
-  if(jardPeriod === 'lastWeek'){ const s = startOfWeek(now); return [addDays(s,-7), s, 'الأسبوع الماضي']; }
-  if(jardPeriod === 'month') return [startOfMonth(now), tomorrow, 'هذا الشهر'];
-  if(jardPeriod === 'lastMonth'){ const m = startOfMonth(now), pm = new Date(m); pm.setMonth(pm.getMonth()-1); return [pm, m, 'الشهر الماضي']; }
-  const f = $('#jFrom').value ? parseDay($('#jFrom').value) : new Date(2000,0,1);
-  const t = $('#jTo').value ? addDays(parseDay($('#jTo').value),1) : tomorrow;
+function periodRange(period, fromId, toId){
+  const now = new Date(), today = startOfDay(now), tomorrow = addDays(today, 1);
+  if(period === 'today') return [today, tomorrow, 'اليوم'];
+  if(period === 'week') return [startOfWeek(now), tomorrow, 'هذا الأسبوع'];
+  if(period === 'lastWeek'){ const s = startOfWeek(now); return [addDays(s,-7), s, 'الأسبوع الماضي']; }
+  if(period === 'month') return [startOfMonth(now), tomorrow, 'هذا الشهر'];
+  if(period === 'lastMonth'){ const m = startOfMonth(now), pm = new Date(m); pm.setMonth(pm.getMonth()-1); return [pm, m, 'الشهر الماضي']; }
+  const f = $('#'+fromId).value ? parseDay($('#'+fromId).value) : new Date(2000,0,1);
+  const t = $('#'+toId).value ? addDays(parseDay($('#'+toId).value),1) : tomorrow;
   return [f, t, 'فترة مخصصة'];
 }
+const jardRange = () => periodRange(jardPeriod, 'jFrom', 'jTo');
 function jardData(){
   const [from, to, label] = jardRange();
   const list = salesBetween(from, to), tus = topupsBetween(from, to);
@@ -1326,6 +1391,106 @@ function printJard(){
     ${prods.map(p=>`<tr><td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(p.cost*Math.max(p.qty,0))}</td><td></td></tr>`).join('')}</table>`);
 }
 
+/* ===================== الأرباح بعملة ثانية ===================== */
+let fxPeriod = 'month', fxMode = 'sale';
+const cur2 = () => esc(db.settings.cur2 || '$');
+const money2 = n => num(n) + ' ' + cur2();
+function currentRate(){ const r = db.rates[db.rates.length - 1]; return r ? r.rate : 0; }
+function rateAt(date){ // سعر الصرف الذي كان سارياً في تاريخ معيّن
+  const t = new Date(date); let r = 0;
+  for(const x of db.rates){ if(new Date(x.date) <= t) r = x.rate; else break; }
+  return r || (db.rates[0] ? db.rates[0].rate : 0);
+}
+function recRate(rec){ return fxMode === 'current' ? currentRate() : (rec.rate || rateAt(rec.date)); }
+const toFx = (amount, rate) => rate ? amount / rate : 0;
+function fxTabs(id, key, cb){
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b || !b.dataset[key]) return;
+    document.querySelectorAll(id + ' button').forEach(x => x.classList.toggle('active', x === b));
+    cb(b.dataset[key]);
+  });
+}
+fxTabs('#fxTabs', 'p', v => {
+  fxPeriod = v;
+  $('#fxCustom').style.display = v === 'custom' ? 'flex' : 'none';
+  if(v === 'custom' && !$('#fxFrom').value){ $('#fxFrom').value = dayKey(startOfMonth(new Date())); $('#fxTo').value = dayKey(new Date()); }
+  renderFx();
+});
+fxTabs('#fxModeTabs', 'm', v => { fxMode = v; renderFx(); });
+function renderFx(){
+  const C = esc(db.settings.currency), rate = currentRate();
+  if(document.activeElement !== $('#fxCur')) $('#fxCur').value = db.settings.cur2 || '$';
+  $('#fxRateLbl').textContent = `1 ${db.settings.cur2 || '$'} = كم ${db.settings.currency}؟`;
+  if(document.activeElement !== $('#fxRate')) $('#fxRate').value = rate || '';
+  $('#fxHist').innerHTML = db.rates.length ? `<b>سجل أسعار الصرف</b><table><tr><th>التاريخ</th><th>1 ${cur2()} =</th><th></th></tr>${db.rates.slice().reverse().slice(0,60).map(r => `<tr><td>${fmtDateTime(r.date)}</td><td>${num(r.rate)} ${C}</td><td><button class="btn-icon danger" onclick="deleteRate('${r.id}')">🗑</button></td></tr>`).join('')}</table>` : '';
+  $('#fxModeTxt').innerHTML = fxMode === 'sale'
+    ? 'كل فاتورة تُحوّل بسعر الصرف الذي كان يوم بيعها — هذا يعطيك ربحك الحقيقي.'
+    : `كل المبالغ تُحوّل بسعر اليوم: 1 ${cur2()} = ${num(rate)} ${C} — يفيد لمعرفة قيمة أرباحك الآن.`;
+  const [from, to, label] = periodRange(fxPeriod, 'fxFrom', 'fxTo');
+  $('#fxRangeTxt').innerHTML = `الفترة: <b>${label}</b> — من ${fmtDate(from)} إلى ${fmtDate(addDays(to,-1))}`;
+  $('#fxDayHead').innerHTML = `<tr><th>اليوم</th><th>المبيعات (${C})</th><th>الربح (${C})</th><th>سعر الصرف</th><th>المبيعات (${cur2()})</th><th>الربح (${cur2()})</th></tr>`;
+  $('#fxProdHead').innerHTML = `<tr><th>المنتج</th><th>الكمية</th><th>الربح (${C})</th><th>الربح (${cur2()})</th></tr>`;
+  if(!db.rates.length){
+    $('#fxStats').innerHTML = `<div class="card" style="grid-column:1/-1;margin:0">⬆ اكتب سعر الصرف أولاً (كم ${C} يساوي 1 ${cur2()}) ثم اضغط «حفظ سعر الصرف».</div>`;
+    ['#fxDays','#fxDaysFoot','#fxProds'].forEach(x => $(x).innerHTML = '');
+    return;
+  }
+  const sales = salesBetween(from, to), tus = topupsBetween(from, to);
+  const g = {total:0, profit:0, fxT:0, fxP:0}, u = {total:0, profit:0, fxT:0, fxP:0}, days = {}, prods = {};
+  const day = d => days[d] || (days[d] = {total:0, profit:0, fxT:0, fxP:0});
+  sales.forEach(s => {
+    const r = recRate(s), d = day(dayKey(s.date));
+    g.total += s.total; g.profit += s.profit; g.fxT += toFx(s.total, r); g.fxP += toFx(s.profit, r);
+    d.total += s.total; d.profit += s.profit; d.fxT += toFx(s.total, r); d.fxP += toFx(s.profit, r);
+    s.items.forEach(i => {
+      const cur = db.products.find(p => p.id === i.pid), k = i.pid || i.name;
+      const o = prods[k] || (prods[k] = {name: cur ? cur.name : i.name, qty:0, profit:0, fxP:0});
+      const pr = (i.price - i.cost) * i.qty;
+      o.qty += i.qty; o.profit += pr; o.fxP += toFx(pr, r);
+    });
+  });
+  tus.forEach(t => {
+    const r = recRate(t), d = day(dayKey(t.date));
+    u.total += t.price; u.profit += t.profit; u.fxT += toFx(t.price, r); u.fxP += toFx(t.profit, r);
+    d.total += t.price; d.profit += t.profit; d.fxT += toFx(t.price, r); d.fxP += toFx(t.profit, r);
+  });
+  const capital = db.products.reduce((a,p) => a + p.cost * Math.max(p.qty,0), 0);
+  $('#fxStats').innerHTML =
+    stat('صافي الربح الكلي', money2(g.fxP + u.fxP), 'g', `= ${money(g.profit + u.profit)}`) +
+    stat('ربح البضاعة', money2(g.fxP), 'g', `= ${money(g.profit)}`) +
+    stat('ربح الوحدات', money2(u.fxP), 'g', `= ${money(u.profit)}`) +
+    stat('إجمالي المبيعات', money2(g.fxT + u.fxT), '', `= ${money(g.total + u.total)}`) +
+    stat('سعر الصرف الحالي', `${num(rate)} ${C}`, 'v', `لكل 1 ${cur2()}`) +
+    stat('رأس المال بالمخزون', money2(toFx(capital, rate)), 'o', `= ${money(capital)} (بسعر اليوم)`);
+  const dl = Object.entries(days).sort((a,b) => b[0].localeCompare(a[0]));
+  $('#fxDays').innerHTML = dl.length ? dl.map(([k,d]) => `<tr><td>${DAYS[parseDay(k).getDay()]} ${fmtDate(parseDay(k))}</td>
+      <td>${num(d.total)}</td><td class="${pcls(d.profit)}">${num(d.profit)}</td><td class="muted">${d.fxT ? num(d.total / d.fxT) : '—'}</td>
+      <td>${money2(d.fxT)}</td><td class="${pcls(d.fxP)}"><b>${money2(d.fxP)}</b></td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">لا توجد مبيعات في هذه الفترة</td></tr>';
+  $('#fxDaysFoot').innerHTML = dl.length ? `<tr><td>المجموع</td><td>${num(g.total + u.total)}</td><td>${num(g.profit + u.profit)}</td><td></td><td>${money2(g.fxT + u.fxT)}</td><td>${money2(g.fxP + u.fxP)}</td></tr>` : '';
+  const pl = Object.values(prods).sort((a,b) => b.fxP - a.fxP);
+  $('#fxProds').innerHTML = pl.length ? pl.map(o => `<tr><td>${esc(o.name)}</td><td>${num(o.qty)}</td><td class="${pcls(o.profit)}">${money(o.profit)}</td><td class="${pcls(o.fxP)}"><b>${money2(o.fxP)}</b></td></tr>`).join('')
+    : '<tr><td colspan="4" class="empty">لا توجد مبيعات بضاعة في هذه الفترة</td></tr>';
+}
+function saveRate(){
+  const c2 = $('#fxCur').value.trim() || '$', rate = r4($('#fxRate').value);
+  if(!(rate > 0)) return alert('اكتب سعر الصرف');
+  if(c2 !== db.settings.cur2){ audit('settings', 'تغيير العملة الثانية', `من ${db.settings.cur2} إلى ${c2}`); db.settings.cur2 = c2; }
+  const old = currentRate();
+  if(rate !== old){
+    db.rates.push({id:uid(), date:new Date().toISOString(), rate});
+    audit('settings', 'تحديث سعر الصرف', `1 ${c2}: من ${old ? num(old) : '—'} إلى ${num(rate)} ${db.settings.currency}`);
+  }
+  save(); applyTitle(); $('#fxRate').blur(); renderFx(); toast('✔ تم حفظ سعر الصرف');
+}
+function deleteRate(id){
+  const r = db.rates.find(x => x.id === id);
+  if(!confirm(`حذف سعر الصرف ${num(r.rate)} المسجّل في ${fmtDateTime(r.date)}؟\n(الفواتير التي حُفظ معها سعرها لا تتأثر)`)) return;
+  db.rates = db.rates.filter(x => x.id !== id);
+  audit('settings', 'حذف سعر صرف', `${fmtDateTime(r.date)} — ${num(r.rate)}`);
+  save(); renderFx();
+}
+
 /* ===================== سجل العمليات ===================== */
 let auLimit = 300;
 $('#auType').innerHTML = '<option value="">كل الأقسام</option>' + Object.entries(AUDIT_TYPES).map(([k,v]) => `<option value="${k}">${v}</option>`).join('');
@@ -1360,7 +1525,10 @@ function saveSettings(){
   if(ch.length) audit('settings', 'تعديل الإعدادات', ch.join('، '));
   save(); applyTitle(); toast('تم حفظ الإعدادات');
 }
-function applyTitle(){ $('#shopTitle').textContent = '🏪 ' + db.settings.shopName; document.title = 'جرد — ' + db.settings.shopName; }
+function applyTitle(){
+  $('#shopTitle').textContent = '🏪 ' + db.settings.shopName; document.title = 'جرد — ' + db.settings.shopName;
+  $('#fxTabBtn').textContent = '💱 الأرباح بـ' + (db.settings.cur2 || '$');
+}
 function exportData(){
   audit('system', 'حفظ نسخة احتياطية', `${db.products.length} منتج — ${db.sales.length} فاتورة — ${db.topups.length} عملية وحدات`);
   save();
@@ -1396,6 +1564,7 @@ function demoData(){
     ['شوكولاتة','6281000000042',0.5,1,50],['حليب 1 لتر','6281000000059',0.9,1.25,30],['خبز','6281000000066',0.5,0.75,25],
     ['معكرونة 500غ','6281000000073',0.7,1.1,40],['شاي 100 كيس','6281000000080',2.2,3.5,15],['سكر 1 كغ','6281000000097',0.8,1.2,2],['زيت نباتي 1 لتر','6281000000103',1.6,2.25,12]];
   const made = items.map(([name,barcode,cost,price,qty]) => {
+    cost *= 1000; price *= 1000; // أسعار بالليرة السورية
     let p = db.products.find(x=>x.barcode===barcode);
     if(!p){ p = {id:uid(),name,barcode,cost,price,qty,created:new Date().toISOString(),history:[]}; pushHistory(p); db.products.push(p); }
     return p;
