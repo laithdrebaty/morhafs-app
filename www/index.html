@@ -61,6 +61,15 @@
   .tag.product{background:#e6efff;color:#2257c4} .tag.sale{background:#e3f5ec;color:#0f7a4a} .tag.topup{background:#f0e9fc;color:#6a3fc4}
   .tag.balance{background:#fff1dc;color:#a8650b} .tag.stock{background:#fde7e7;color:#b83232} .tag.settings{background:#eef1f6;color:#555} .tag.system{background:#1d2433;color:#fff}
   .inp-sm{width:95px} .inp-xs{width:60px;text-align:center}
+  .chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;white-space:nowrap;border:1px solid transparent;margin:1px 0 1px 3px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip-btn{cursor:pointer;background:#fff;border:1px solid var(--line);font:inherit;font-size:13px;padding:6px 12px;border-radius:20px;color:var(--text)}
+  .catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .cat{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-top:5px solid var(--c)}
+  .cat .nm{font-size:17px;font-weight:700;color:var(--c)}
+  .cat .kv{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+  .cat .kv div{background:#f7f8fb;border-radius:8px;padding:6px 9px}
+  .cat .kv span{display:block;font-size:12px;color:var(--muted)}
   .qty{display:flex;align-items:center;gap:4px}
   .qty button{width:30px;height:32px;border:0;border-radius:6px;background:#eef1f6;cursor:pointer;font-size:16px}
   .note{background:#fff8e6;border-radius:8px;padding:8px 12px;font-size:13px;color:#7a5a0e;margin-top:10px}
@@ -148,6 +157,8 @@
     <button data-tab="sale">🧾 فاتورة بيع</button>
     <button data-tab="topup">📱 الوحدات</button>
     <button data-tab="products">📦 المنتجات</button>
+    <button data-tab="stock">🏬 المخزون</button>
+    <button data-tab="tags">🏷️ الأصناف</button>
     <button data-tab="invoices">📑 الفواتير</button>
     <button data-tab="jard">📋 الجرد</button>
     <button data-tab="fx" id="fxTabBtn">💱 الأرباح بالدولار</button>
@@ -174,7 +185,10 @@
       <div class="card"><h3>📱 الوحدات هذا الشهر حسب الشركة</h3><div id="topProv"></div></div>
       <div class="card"><h3>⚠️ منتجات قاربت على النفاد</h3><div id="lowStock"></div></div>
     </div>
-    <div class="card"><h3>🧾 آخر الفواتير</h3><div id="lastInv"></div></div>
+    <div class="grid two">
+      <div class="card"><h3>🏷️ الربح حسب الصنف هذا الشهر</h3><div id="topTags"></div></div>
+      <div class="card"><h3>🧾 آخر الفواتير</h3><div id="lastInv"></div></div>
+    </div>
   </section>
 
   <!-- ============ فاتورة بيع ============ -->
@@ -262,6 +276,7 @@
         <h2 style="margin:0">المنتجات</h2>
         <div class="spacer"></div>
         <input id="prodSearch" placeholder="🔍 بحث بالاسم أو الباركود" oninput="renderProducts()">
+        <select id="prodTag" onchange="renderProducts()"></select>
         <button class="btn p" onclick="openProductModal(null)">➕ إضافة منتج</button>
       </div>
       <div class="note">💡 تغيير سعر أي منتج ينطبق على <b>الفواتير الجديدة فقط</b> — الفواتير القديمة تبقى محفوظة بأسعارها وأرباحها وقت البيع.</div>
@@ -270,12 +285,54 @@
     <div class="card tbl-wrap">
       <table>
         <thead><tr>
-          <th>المنتج</th><th>الباركود</th><th>سعر التكلفة</th><th>سعر البيع</th>
+          <th>المنتج</th><th>الصنف</th><th>الباركود</th><th>سعر التكلفة</th><th>سعر البيع</th>
           <th>ربح القطعة</th><th>نسبة الربح</th><th>الكمية</th><th>رأس المال</th><th>الربح المتوقع</th><th></th>
         </tr></thead>
         <tbody id="prodBody"></tbody>
       </table>
     </div>
+  </section>
+
+  <!-- ============ المخزون ============ -->
+  <section id="tab-stock">
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">المخزون</h2>
+        <div class="spacer"></div>
+        <input id="stSearch" placeholder="🔍 بحث بالاسم أو الباركود" oninput="renderStock()">
+        <select id="stTag" onchange="renderStock()"></select>
+        <select id="stStatus" onchange="renderStock()">
+          <option value="">كل الحالات</option><option value="ok">✅ متوفر</option><option value="low">⚠️ قليل</option><option value="out">⛔ نافد</option>
+        </select>
+        <select id="stSort" onchange="renderStock()">
+          <option value="name">ترتيب: الاسم</option><option value="qty">الكمية (الأقل أولاً)</option>
+          <option value="capital">رأس المال (الأعلى أولاً)</option><option value="sold">الأكثر مبيعاً هذا الشهر</option><option value="stale">الأقدم بيعاً (راكد)</option>
+        </select>
+        <button class="btn" id="stPrintBtn" onclick="printStock()">🖨 طباعة</button>
+      </div>
+    </div>
+    <div class="grid stats" id="stStats" style="margin-bottom:16px"></div>
+    <div class="card tbl-wrap">
+      <table>
+        <thead><tr><th>المنتج</th><th>الصنف</th><th>الكمية</th><th>الحالة</th><th>سعر التكلفة</th><th>رأس المال</th><th>سعر البيع</th><th>قيمة البيع</th><th>مباع هذا الشهر</th><th>آخر بيع</th><th></th></tr></thead>
+        <tbody id="stBody"></tbody>
+        <tfoot id="stFoot"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ الأصناف ============ -->
+  <section id="tab-tags">
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">الأصناف</h2>
+        <div class="spacer"></div>
+        <input id="newTagName" placeholder="اسم صنف جديد، مثال: مشروبات">
+        <button class="btn p" onclick="addTagFromPage()">➕ إضافة صنف</button>
+      </div>
+      <p class="muted small" style="margin-bottom:0">اضغط «📦 المنتجات» في أي صنف لعرض منتجاته في صفحة المخزون. الأرقام الشهرية لهذا الشهر.</p>
+    </div>
+    <div class="catgrid" id="tagGrid"></div>
   </section>
 
   <!-- ============ الفواتير ============ -->
@@ -346,6 +403,7 @@
       <div class="row">
         <h3 style="margin:0">جرد المخزون الفعلي</h3>
         <div class="spacer"></div>
+        <select id="jTag" onchange="renderJard()"></select>
         <button class="btn g" onclick="applyCount()">✔ اعتماد الجرد الفعلي</button>
       </div>
       <p class="muted small">اكتب الكمية الموجودة فعلياً على الرف لكل منتج (اترك الخانة فارغة إذا كانت مطابقة)، ثم اضغط «اعتماد» لتحديث المخزون.</p>
@@ -480,6 +538,9 @@
       <div><label>سعر البيع *</label><input id="pPrice" type="number" step="any" min="0" inputmode="decimal" required oninput="updatePmProfit()"></div>
     </div>
     <label>الكمية في المخزون</label><input id="pQty" type="number" step="any" inputmode="decimal" value="0" oninput="updatePmProfit()">
+    <label>الصنف (يمكن اختيار أكثر من صنف)</label>
+    <div class="chips" id="pmTags"></div>
+    <div class="row" style="flex-wrap:nowrap;margin-top:8px"><input id="pNewTag" placeholder="صنف جديد، مثال: دخان" style="flex:1;min-width:0"><button type="button" class="btn" onclick="pmAddTag()">➕ صنف</button></div>
     <div class="profit-box" id="pmProfit"></div>
     <div id="pmHist"></div>
     <div class="row" style="margin-top:16px">
@@ -584,7 +645,7 @@ const PRINT_LBL = NATIVE ? '📤 مشاركة' : '🖨 طباعة';
 const KEY = 'mahal_inventory_v1';
 const DAYS = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 function defaultDB(){
-  return {products:[], sales:[], providers:[], topups:[], charges:[], audit:[], rates:[],
+  return {products:[], tags:[], sales:[], providers:[], topups:[], charges:[], audit:[], rates:[],
           nextInvoice:1, nextTopup:1, settings:{shopName:'محلي', currency:'ل.س', cur2:'$', lowStock:3, curV2:1}};
 }
 function normalize(d){
@@ -708,11 +769,14 @@ async function saveFile(name, content, mime){
 
 /* ===================== التبويبات ===================== */
 let currentTab = 'dash';
+const RENDER = {dash:()=>renderDashboard(), sale:()=>renderCart(), topup:()=>renderTopup(), products:()=>renderProducts(), stock:()=>renderStock(), tags:()=>renderTags(),
+                invoices:()=>renderInvoices(), jard:()=>renderJard(), fx:()=>renderFx(), audit:()=>renderAudit(true), settings:()=>renderSettings()};
+function rerender(){ RENDER[currentTab](); }
 function showTab(t){
   currentTab = t;
   document.querySelectorAll('#nav button').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('active', on); if(on) b.scrollIntoView({block:'nearest', inline:'nearest'}); });
   document.querySelectorAll('main section').forEach(s => s.classList.toggle('active', s.id === 'tab-'+t));
-  ({dash:renderDashboard, sale:renderCart, topup:renderTopup, products:renderProducts, invoices:renderInvoices, jard:renderJard, fx:renderFx, audit:()=>renderAudit(true), settings:renderSettings})[t]();
+  RENDER[t]();
   if(t === 'sale') focusIfDesktop($('#saleInput'));
   window.scrollTo(0,0);
 }
@@ -764,6 +828,11 @@ function renderDashboard(){
   const pv = providerStats(topupsBetween(startOfMonth(now), tomorrow)).sort((a,b)=>b.total-a.total);
   $('#topProv').innerHTML = hbars(pv, 'total', 'v', x => `${num(x.units)} وحدة — ربح ${money(x.profit)}`, 'لا توجد عمليات وحدات هذا الشهر');
 
+  const ts = tagStats(salesBetween(startOfMonth(now), tomorrow)).filter(x => x.qty).sort((a,b)=>b.profit-a.profit);
+  $('#topTags').innerHTML = ts.length ? (() => { const mx = Math.max(1, ...ts.map(x => x.profit));
+    return ts.map(x => `<div class="hbar"><div class="top"><span>${esc(x.name)}</span><b>${money(x.profit)} <span class="muted small">(${num(x.qty)} قطعة)</span></b></div>
+      <div class="track"><div class="fill" style="width:${Math.max(0,x.profit)/mx*100}%;background:${x.color}"></div></div></div>`).join(''); })()
+    : '<div class="muted">لا توجد مبيعات بعد هذا الشهر</div>';
   const low = db.products.filter(p => p.qty <= db.settings.lowStock).sort((a,b)=>a.qty-b.qty);
   $('#lowStock').innerHTML = low.length
     ? '<table>' + low.slice(0,10).map(p => `<tr><td>${esc(p.name)}</td><td><span class="badge">باقي ${num(p.qty)}</span></td></tr>`).join('') + '</table>'
@@ -984,19 +1053,21 @@ async function closeScanner(){
 /* ===================== المنتجات ===================== */
 function renderProducts(){
   const q = ($('#prodSearch').value || '').trim().toLowerCase();
-  const list = db.products.filter(p => !q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q))
+  fillTagSelect('#prodTag'); const tg = $('#prodTag').value;
+  const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg))
                           .sort((a,b) => a.name.localeCompare(b.name, 'ar'));
   let cap=0, val=0, exp=0, pcs=0;
   db.products.forEach(p => { const qn = Math.max(p.qty,0); cap += p.cost*qn; val += p.price*qn; exp += (p.price-p.cost)*qn; pcs += qn; });
   $('#prodStats').innerHTML = stat('عدد المنتجات', db.products.length) + stat('عدد القطع بالمخزون', num(pcs)) +
     stat('رأس المال (بسعر التكلفة)', money(cap), 'o') + stat('قيمة المخزون (بسعر البيع)', money(val)) + stat('الربح المتوقع', money(exp), 'g');
   const tb = $('#prodBody');
-  if(!list.length){ tb.innerHTML = `<tr><td colspan="10" class="empty">${db.products.length ? 'لا توجد نتائج' : 'لا توجد منتجات بعد — اضغط «إضافة منتج»'}</td></tr>`; return; }
+  if(!list.length){ tb.innerHTML = `<tr><td colspan="11" class="empty">${db.products.length ? 'لا توجد نتائج' : 'لا توجد منتجات بعد — اضغط «إضافة منتج»'}</td></tr>`; return; }
   tb.innerHTML = list.map(p => {
     const pr = p.price - p.cost, pct = p.cost > 0 ? pr / p.cost * 100 : 0, qn = Math.max(p.qty,0);
     const isLow = p.qty <= db.settings.lowStock;
     return `<tr class="${isLow ? 'low' : ''}">
       <td><b>${esc(p.name)}</b></td>
+      <td>${tagChips(p)}</td>
       <td class="muted small">${esc(p.barcode || '—')}</td>
       <td>${money(p.cost)}</td>
       <td>${money(p.price)}</td>
@@ -1023,6 +1094,8 @@ function openProductModal(id, preset={}){
   $('#pCost').value = p ? p.cost : '';
   $('#pPrice').value = p ? p.price : '';
   $('#pQty').value = p ? p.qty : 0;
+  pmTagSel = new Set(p ? (p.tags || []).filter(tagById) : (preset.tag && tagById(preset.tag) ? [preset.tag] : []));
+  $('#pNewTag').value = ''; renderPmTags();
   const h = (p && p.history) || [];
   $('#pmHist').innerHTML = h.length > 1
     ? `<div class="hist"><b>سجل الأسعار</b><table><tr><th>التاريخ</th><th>التكلفة</th><th>البيع</th></tr>${h.slice().reverse().map(x => `<tr><td>${fmtDateTime(x.d)}</td><td>${num(x.cost)}</td><td>${num(x.price)}</td></tr>`).join('')}</table></div>`
@@ -1039,34 +1112,45 @@ function updatePmProfit(){
     &nbsp;|&nbsp; النسبة: <b class="${pcls(pr)}">${c > 0 ? num(pr/c*100) : 0}%</b><br>
     رأس المال: <b>${money(c*Math.max(q,0))}</b> &nbsp;|&nbsp; الربح المتوقع: <b class="${pcls(pr)}">${money(pr*Math.max(q,0))}</b>`;
 }
-const PFIELDS = {name:'الاسم', barcode:'الباركود', cost:'سعر التكلفة', price:'سعر البيع', qty:'الكمية'};
+const PFIELDS = {name:'الاسم', barcode:'الباركود', cost:'سعر التكلفة', price:'سعر البيع', qty:'الكمية', tags:'الصنف'};
+let pmTagSel = new Set();
+function renderPmTags(){
+  $('#pmTags').innerHTML = db.tags.length ? sortedTags().map(t => {
+    const on = pmTagSel.has(t.id);
+    return `<button type="button" class="chip-btn" style="${on ? `background:${t.color};border-color:${t.color};color:#fff` : `color:${t.color};border-color:${t.color}66`}" onclick="pmToggleTag('${t.id}')">${on ? '✓ ' : ''}${esc(t.name)}</button>`;
+  }).join('') : '<span class="muted small">لا توجد أصناف بعد — اكتب اسم صنف واضغط «➕ صنف»</span>';
+}
+function pmToggleTag(id){ pmTagSel.has(id) ? pmTagSel.delete(id) : pmTagSel.add(id); renderPmTags(); }
+function pmAddTag(){ const t = createTag($('#pNewTag').value); if(!t) return; pmTagSel.add(t.id); $('#pNewTag').value = ''; save(); renderPmTags(); }
+$('#pNewTag').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); pmAddTag(); } });
 function saveProduct(e){
   e.preventDefault();
   const name = $('#pName').value.trim(), barcode = $('#pBarcode').value.trim();
-  const cost = r2($('#pCost').value), price = r2($('#pPrice').value), qty = r2($('#pQty').value);
+  const cost = r2($('#pCost').value), price = r2($('#pPrice').value), qty = r2($('#pQty').value), tags = [...pmTagSel];
   if(!name) return alert('اكتب اسم المنتج');
   if(barcode && db.products.some(x => x.barcode === barcode && x.id !== editingId)) return alert('هذا الباركود مستخدم لمنتج آخر');
   if(price < cost && !confirm('سعر البيع أقل من سعر التكلفة (خسارة). هل أنت متأكد؟')) return;
   let p;
   if(editingId){
     p = db.products.find(x => x.id === editingId);
-    const nw = {name, barcode, cost, price, qty};
-    const changes = Object.keys(PFIELDS).filter(k => String(p[k] ?? '') !== String(nw[k] ?? '')).map(k => `${PFIELDS[k]}: من ${p[k] === '' ? '—' : p[k]} إلى ${nw[k] === '' ? '—' : nw[k]}`);
+    const nw = {name, barcode, cost, price, qty, tags};
+    const fv = (k, v) => k === 'tags' ? tagNames(v) : (v === '' || v == null ? '—' : v);
+    const changes = Object.keys(PFIELDS).filter(k => String(fv(k, p[k])) !== String(fv(k, nw[k]))).map(k => `${PFIELDS[k]}: من ${fv(k, p[k])} إلى ${fv(k, nw[k])}`);
     const priceChanged = p.cost !== cost || p.price !== price;
     Object.assign(p, nw);
     if(priceChanged) pushHistory(p);
     if(changes.length) audit('product', (priceChanged ? 'تغيير سعر منتج: ' : 'تعديل منتج: ') + name, changes.join('، '));
   } else {
-    p = {id:uid(), name, barcode, cost, price, qty, created:new Date().toISOString(), history:[]};
+    p = {id:uid(), name, barcode, cost, price, qty, tags, created:new Date().toISOString(), history:[]};
     pushHistory(p);
     db.products.push(p);
-    audit('product', 'إضافة منتج: ' + name, `التكلفة ${num(cost)} — البيع ${num(price)} — الكمية ${num(qty)}${barcode ? ' — باركود ' + barcode : ''}`);
+    audit('product', 'إضافة منتج: ' + name, `التكلفة ${num(cost)} — البيع ${num(price)} — الكمية ${num(qty)} — الصنف ${tagNames(tags)}${barcode ? ' — باركود ' + barcode : ''}`);
   }
   save();
   closeModal('prodModal');
   toast('تم حفظ المنتج');
   if(afterSaveAddToCart){ afterSaveAddToCart = false; showTab('sale'); addToCart(p); }
-  else if(currentTab === 'products') renderProducts();
+  else rerender();
 }
 let restockId = null;
 function openRestock(id){
@@ -1088,14 +1172,137 @@ function saveRestock(e){
   p.qty = r2(p.qty + q); p.cost = cost; p.price = price;
   if(priceChanged) pushHistory(p);
   audit('product', `إضافة كمية (${num(q)}) لـ ${p.name}`, det);
-  save(); closeModal('restockModal'); renderProducts(); toast('المخزون الآن: ' + num(p.qty));
+  save(); closeModal('restockModal'); rerender(); toast('المخزون الآن: ' + num(p.qty));
 }
 function deleteProduct(id){
   const p = db.products.find(x => x.id === id);
   if(!confirm(`حذف المنتج "${p.name}"؟\n(الفواتير القديمة تبقى محفوظة)`)) return;
   db.products = db.products.filter(x => x.id !== id);
   audit('product', 'حذف منتج: ' + p.name, `الكمية وقت الحذف ${num(p.qty)} — التكلفة ${num(p.cost)} — البيع ${num(p.price)}`);
-  save(); renderProducts();
+  save(); rerender();
+}
+
+/* ===================== الأصناف ===================== */
+const TAG_COLORS = ['#2f6fed','#15935a','#d33f3f','#e08a12','#7a4fd6','#0e9aa7','#c2417a','#6b7a1f','#8a5a2b','#4b5563'];
+const tagById = id => db.tags.find(t => t.id === id);
+const sortedTags = () => db.tags.slice().sort((a,b) => a.name.localeCompare(b.name, 'ar'));
+const productTags = p => (p.tags || []).map(tagById).filter(Boolean);
+const tagChip = t => `<span class="chip" style="background:${t.color}1c;color:${t.color};border-color:${t.color}55">${esc(t.name)}</span>`;
+function tagChips(p){ const ts = productTags(p); return ts.length ? ts.map(tagChip).join('') : '<span class="muted small">—</span>'; }
+function tagNames(ids){ return (ids || []).map(id => (tagById(id) || {}).name).filter(Boolean).join('، ') || 'بدون صنف'; }
+function matchTag(p, tagId){ if(!tagId) return true; if(tagId === '__none') return !productTags(p).length; return (p.tags || []).includes(tagId); }
+function fillTagSelect(sel){
+  const el = $(sel), v = el.value;
+  el.innerHTML = '<option value="">🏷️ كل الأصناف</option>' + sortedTags().map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('') + '<option value="__none">بدون صنف</option>';
+  el.value = [...el.options].some(o => o.value === v) ? v : '';
+}
+function createTag(name){
+  name = String(name || '').trim(); if(!name) return null;
+  let t = db.tags.find(x => x.name === name); if(t) return t;
+  t = {id:uid(), name, color:TAG_COLORS[db.tags.length % TAG_COLORS.length]};
+  db.tags.push(t);
+  audit('product', 'إضافة صنف: ' + name);
+  return t;
+}
+function tagStats(salesList){
+  const m = {}, get = (id, name, color) => m[id] || (m[id] = {id, name, color, qty:0, revenue:0, profit:0});
+  salesList.forEach(s => s.items.forEach(i => {
+    const p = db.products.find(x => x.id === i.pid), ts = p ? productTags(p) : [];
+    const buckets = ts.length ? ts.map(t => get(t.id, t.name, t.color)) : [get('__none', 'بدون صنف', '#8a93a6')];
+    buckets.forEach(o => { o.qty += i.qty; o.revenue += i.price*i.qty; o.profit += (i.price-i.cost)*i.qty; });
+  }));
+  return Object.values(m);
+}
+function renderTags(){
+  const now = new Date(), month = tagStats(salesBetween(startOfMonth(now), addDays(startOfDay(now),1)));
+  const cards = [...sortedTags().map(t => ({...t, real:true})), ...(db.products.some(p => !productTags(p).length) ? [{id:'__none', name:'بدون صنف', color:'#8a93a6'}] : [])];
+  $('#tagGrid').innerHTML = cards.length ? cards.map(t => {
+    const ps = db.products.filter(p => matchTag(p, t.id)), ms = month.find(x => x.id === t.id) || {qty:0, revenue:0, profit:0};
+    const pcs = ps.reduce((a,p)=>a+Math.max(p.qty,0),0), cap = ps.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0);
+    const out = ps.filter(p => p.qty <= 0).length, low = ps.filter(p => p.qty > 0 && p.qty <= db.settings.lowStock).length;
+    return `<div class="cat" style="--c:${t.color}">
+      <div class="row"><span class="nm">${esc(t.name)}</span><div class="spacer"></div>
+        ${out ? `<span class="badge">⛔ ${out} نافد</span>` : ''}${low ? `<span class="badge" style="background:#fff1dc;color:#a8650b">⚠️ ${low} قليل</span>` : ''}</div>
+      <div class="kv">
+        <div><span>المنتجات</span><b>${ps.length}</b></div>
+        <div><span>القطع بالمخزون</span><b>${num(pcs)}</b></div>
+        <div><span>رأس المال</span><b>${money(cap)}</b></div>
+        <div><span>مبيعات الشهر</span><b>${money(ms.revenue)}</b></div>
+        <div><span>القطع المباعة</span><b>${num(ms.qty)}</b></div>
+        <div><span>ربح الشهر</span><b class="${pcls(ms.profit)}">${money(ms.profit)}</b></div>
+      </div>
+      <div class="row">
+        <button class="btn-icon" onclick="goStock('${t.id}')">📦 المنتجات</button>
+        ${t.real ? `<button class="btn-icon" onclick="addProductInTag('${t.id}')">➕ منتج</button>
+        <div class="spacer"></div>
+        <button class="btn-icon" title="تغيير اللون" onclick="recolorTag('${t.id}')">🎨</button>
+        <button class="btn-icon" title="إعادة تسمية" onclick="renameTag('${t.id}')">✏️</button>
+        <button class="btn-icon danger" title="حذف" onclick="deleteTag('${t.id}')">🗑</button>` : ''}
+      </div></div>`;
+  }).join('') : '<div class="card muted">لا توجد أصناف بعد. أضف صنفاً (مثلاً: دخان، مشروبات، بسكوت) ثم اختره للمنتجات من نافذة تعديل المنتج.</div>';
+}
+function addTagFromPage(){ const t = createTag($('#newTagName').value); if(!t) return; $('#newTagName').value = ''; save(); renderTags(); toast('تمت إضافة الصنف: ' + t.name); }
+$('#newTagName').addEventListener('keydown', e => { if(e.key === 'Enter') addTagFromPage(); });
+function goStock(tagId){ fillTagSelect('#stTag'); $('#stTag').value = tagId; $('#stStatus').value = ''; $('#stSearch').value = ''; showTab('stock'); }
+function addProductInTag(tagId){ openProductModal(null, {tag:tagId}); }
+function renameTag(id){
+  const t = tagById(id), n = (prompt('الاسم الجديد للصنف:', t.name) || '').trim();
+  if(!n || n === t.name) return;
+  if(db.tags.some(x => x.name === n && x.id !== id)) return alert('يوجد صنف بهذا الاسم');
+  audit('product', 'إعادة تسمية صنف', `من ${t.name} إلى ${n}`);
+  t.name = n; save(); renderTags();
+}
+function recolorTag(id){ const t = tagById(id); t.color = TAG_COLORS[(TAG_COLORS.indexOf(t.color) + 1) % TAG_COLORS.length]; save(); renderTags(); }
+function deleteTag(id){
+  const t = tagById(id), n = db.products.filter(p => (p.tags || []).includes(id)).length;
+  if(!confirm(`حذف الصنف "${t.name}"؟\n${n ? `سيُزال من ${n} منتج (المنتجات نفسها لا تُحذف).` : ''}`)) return;
+  db.products.forEach(p => { if(p.tags) p.tags = p.tags.filter(x => x !== id); });
+  db.tags = db.tags.filter(x => x.id !== id);
+  audit('product', 'حذف صنف: ' + t.name, n ? `أُزيل من ${n} منتج` : '');
+  save(); renderTags();
+}
+
+/* ===================== المخزون ===================== */
+function stockStatus(p){ return p.qty <= 0 ? 'out' : (p.qty <= db.settings.lowStock ? 'low' : 'ok'); }
+const STATUS_LBL = {ok:'<span class="chip" style="background:#e3f5ec;color:#0f7a4a">✅ متوفر</span>', low:'<span class="chip" style="background:#fff1dc;color:#a8650b">⚠️ قليل</span>', out:'<span class="chip" style="background:#fde7e7;color:#b83232">⛔ نافد</span>'};
+function stockData(){
+  fillTagSelect('#stTag');
+  const q = $('#stSearch').value.trim().toLowerCase(), tg = $('#stTag').value, st = $('#stStatus').value, sort = $('#stSort').value;
+  const mStart = startOfMonth(new Date()), sold = {}, last = {};
+  db.sales.forEach(s => { const d = new Date(s.date); s.items.forEach(i => { if(!last[i.pid] || d > last[i.pid]) last[i.pid] = d; if(d >= mStart) sold[i.pid] = (sold[i.pid] || 0) + i.qty; }); });
+  const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg) && (!st || stockStatus(p) === st));
+  const cmp = {name:(a,b) => a.name.localeCompare(b.name,'ar'), qty:(a,b) => a.qty - b.qty, capital:(a,b) => b.cost*Math.max(b.qty,0) - a.cost*Math.max(a.qty,0),
+               sold:(a,b) => (sold[b.id]||0) - (sold[a.id]||0), stale:(a,b) => (last[a.id] || 0) - (last[b.id] || 0)};
+  list.sort(cmp[sort] || cmp.name);
+  return {list, sold, last, tagName: tg ? (tg === '__none' ? 'بدون صنف' : (tagById(tg) || {}).name) : ''};
+}
+function renderStock(){
+  $('#stPrintBtn').textContent = PRINT_LBL;
+  const {list, sold, last} = stockData();
+  let pcs = 0, cap = 0, val = 0;
+  list.forEach(p => { const qn = Math.max(p.qty,0); pcs += qn; cap += p.cost*qn; val += p.price*qn; });
+  const out = list.filter(p => stockStatus(p) === 'out').length, low = list.filter(p => stockStatus(p) === 'low').length;
+  $('#stStats').innerHTML = stat('عدد المنتجات', list.length) + stat('القطع بالمخزون', num(pcs)) + stat('رأس المال', money(cap), 'o') +
+    stat('قيمة البيع', money(val)) + stat('الربح المتوقع', money(val - cap), 'g') + stat('نافد', out, 'r') + stat('قليل', low, 'o');
+  $('#stBody').innerHTML = list.length ? list.map(p => { const qn = Math.max(p.qty,0), st = stockStatus(p);
+    return `<tr class="${st !== 'ok' ? 'low' : ''}">
+      <td><b>${esc(p.name)}</b><div class="muted small">${esc(p.barcode || '')}</div></td>
+      <td>${tagChips(p)}</td>
+      <td><b>${num(p.qty)}</b></td><td>${STATUS_LBL[st]}</td>
+      <td>${money(p.cost)}</td><td>${money(p.cost*qn)}</td><td>${money(p.price)}</td><td>${money(p.price*qn)}</td>
+      <td>${num(sold[p.id] || 0)}</td><td class="small muted">${last[p.id] ? fmtDate(last[p.id]) : 'لم يُبع'}</td>
+      <td style="white-space:nowrap"><button class="btn-icon" title="إضافة كمية" onclick="openRestock('${p.id}')">➕</button>
+        <button class="btn-icon" title="تعديل" onclick="openProductModal('${p.id}')">✏️</button></td></tr>`; }).join('')
+    : `<tr><td colspan="11" class="empty">${db.products.length ? 'لا توجد منتجات تطابق الفلتر' : 'لا توجد منتجات بعد'}</td></tr>`;
+  $('#stFoot').innerHTML = list.length ? `<tr><td colspan="2">المجموع (${list.length} منتج)</td><td>${num(pcs)}</td><td></td><td></td><td>${money(cap)}</td><td></td><td>${money(val)}</td><td></td><td></td><td></td></tr>` : '';
+}
+function printStock(){
+  const {list, tagName} = stockData();
+  const cap = list.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0);
+  printHTML(`<h2 style="text-align:center">${esc(db.settings.shopName)} — المخزون${tagName ? ' (' + esc(tagName) + ')' : ''}</h2>
+    <p style="text-align:center">${fmtDateTime(new Date())} — ${list.length} منتج — رأس المال ${money(cap)}</p>
+    <table><tr><th>المنتج</th><th>الصنف</th><th>الكمية</th><th>سعر التكلفة</th><th>رأس المال</th><th>سعر البيع</th><th style="width:100px">الفعلي</th></tr>
+    ${list.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(productTags(p).map(t => t.name).join('، '))}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(p.cost*Math.max(p.qty,0))}</td><td>${money(p.price)}</td><td></td></tr>`).join('')}</table>`);
 }
 
 /* ===================== الوحدات / الرصيد ===================== */
@@ -1338,12 +1545,13 @@ function renderJard(){
     : '<tr><td colspan="7" class="empty">لا توجد عمليات وحدات</td></tr>';
   $('#jardUnitsFoot').innerHTML = pv.length ? `<tr><td>المجموع</td><td>${us.count}</td><td>${num(us.units)}</td><td>${money(us.total)}</td><td>${money(us.cost)}</td><td>${money(us.profit)}</td><td></td></tr>` : '';
 
-  const prods = [...db.products].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  fillTagSelect('#jTag');
+  const prods = db.products.filter(p => matchTag(p, $('#jTag').value)).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   $('#jardStock').innerHTML = prods.length ? prods.map(p => `<tr>
       <td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(p.cost*Math.max(p.qty,0))}</td>
       <td><input type="number" step="any" inputmode="decimal" class="inp-sm count-inp" data-id="${p.id}" oninput="countDiff(this)"></td><td class="diff"></td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">لا توجد منتجات</td></tr>';
-  $('#jardStockFoot').innerHTML = prods.length ? `<tr><td>المجموع</td><td>${num(prods.reduce((a,p)=>a+Math.max(p.qty,0),0))}</td><td></td><td>${money(capital)}</td><td></td><td id="diffTotal"></td></tr>` : '';
+  $('#jardStockFoot').innerHTML = prods.length ? `<tr><td>المجموع</td><td>${num(prods.reduce((a,p)=>a+Math.max(p.qty,0),0))}</td><td></td><td>${money(prods.reduce((a,p)=>a+p.cost*Math.max(p.qty,0),0))}</td><td></td><td id="diffTotal"></td></tr>` : '';
 }
 function countDiff(inp){
   const p = db.products.find(x => x.id === inp.dataset.id), cell = inp.closest('tr').querySelector('.diff');
@@ -1560,13 +1768,13 @@ function wipeData(){
 }
 function demoData(){
   if(!confirm('إضافة منتجات وفواتير وعمليات وحدات تجريبية لتجربة البرنامج؟')) return;
-  const items = [['مياه معدنية 1.5 لتر','6281000000011',0.35,0.5,120],['شيبس كبير','6281000000028',0.6,1,60],['مشروب غازي علبة','6281000000035',0.4,0.75,96],
-    ['شوكولاتة','6281000000042',0.5,1,50],['حليب 1 لتر','6281000000059',0.9,1.25,30],['خبز','6281000000066',0.5,0.75,25],
-    ['معكرونة 500غ','6281000000073',0.7,1.1,40],['شاي 100 كيس','6281000000080',2.2,3.5,15],['سكر 1 كغ','6281000000097',0.8,1.2,2],['زيت نباتي 1 لتر','6281000000103',1.6,2.25,12]];
-  const made = items.map(([name,barcode,cost,price,qty]) => {
+  const items = [['مياه معدنية 1.5 لتر','6281000000011',0.35,0.5,120,'مشروبات'],['شيبس كبير','6281000000028',0.6,1,60,'سناكات'],['مشروب غازي علبة','6281000000035',0.4,0.75,96,'مشروبات'],
+    ['شوكولاتة','6281000000042',0.5,1,50,'سناكات'],['بسكويت','6281000000059',0.9,1.25,30,'بسكوت'],['دخان علبة','6281000000066',12,14,40,'دخان'],
+    ['معكرونة 500غ','6281000000073',0.7,1.1,40,'مواد غذائية'],['شاي 100 كيس','6281000000080',2.2,3.5,15,'مواد غذائية'],['سكر 1 كغ','6281000000097',0.8,1.2,2,'مواد غذائية'],['ويفر','6281000000103',0.3,0.5,0,'بسكوت']];
+  const made = items.map(([name,barcode,cost,price,qty,tag]) => {
     cost *= 1000; price *= 1000; // أسعار بالليرة السورية
     let p = db.products.find(x=>x.barcode===barcode);
-    if(!p){ p = {id:uid(),name,barcode,cost,price,qty,created:new Date().toISOString(),history:[]}; pushHistory(p); db.products.push(p); }
+    if(!p){ p = {id:uid(),name,barcode,cost,price,qty,tags:[createTag(tag).id],created:new Date().toISOString(),history:[]}; pushHistory(p); db.products.push(p); }
     return p;
   });
   const provs = [['شركة أ',0.9,1.05,5000],['شركة ب',0.92,1.08,3000]].map(([name,unitCost,unitPrice,balance]) => {
