@@ -87,12 +87,6 @@
   .suggest div:hover{background:#f1f5ff}
   .totals{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-top:14px}
   .totals .t{font-size:14px;color:var(--muted)} .totals .t b{display:block;font-size:24px;color:var(--text)}
-  /* الوحدات */
-  .prov{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
-  .prov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
-  .prov-grid div{background:#f7f8fb;border-radius:8px;padding:7px 9px}
-  .prov-grid span{display:block;font-size:12px;color:var(--muted)}
-  @media(max-width:600px){.prov-grid{grid-template-columns:1fr 1fr}}
   /* الرسم البياني */
   .chart{display:flex;align-items:flex-end;gap:5px;height:210px;padding-top:20px;border-bottom:1px solid var(--line)}
   .chart .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
@@ -163,13 +157,11 @@
     <button data-tab="sale">🧾 فاتورة بيع</button>
     <button data-tab="purchases">🛒 المشتريات</button>
     <button data-tab="box">💰 الصندوق</button>
-    <button data-tab="topup">📱 الوحدات</button>
     <button data-tab="products">📦 المنتجات</button>
     <button data-tab="stock">🏬 المخزون</button>
     <button data-tab="tags">🏷️ الأصناف</button>
     <button data-tab="invoices">📑 الفواتير</button>
     <button data-tab="jard">📋 الجرد</button>
-    <button data-tab="fx" id="fxTabBtn">💱 الأرباح بالدولار</button>
     <button data-tab="audit">🕵️ سجل العمليات</button>
     <button data-tab="settings">⚙️ الإعدادات</button>
   </nav>
@@ -180,7 +172,7 @@
   <section id="tab-dash" class="active">
     <div class="grid stats" id="dashStats"></div>
     <div class="card" style="margin-top:16px">
-      <h3>المبيعات اليومية — آخر 14 يوم (بضاعة + وحدات)</h3>
+      <h3>المبيعات اليومية — آخر 14 يوم</h3>
       <div class="chart" id="dayChart"></div>
       <div class="chart-lbl" id="dayChartLbl"></div>
       <div class="legend"><span><i style="background:#b9cdfa"></i>المبيعات</span><span><i style="background:var(--primary)"></i>الربح</span></div>
@@ -189,10 +181,7 @@
       <div class="card"><h3>🔥 الأكثر مبيعاً هذا الشهر (بالكمية)</h3><div id="topQty"></div></div>
       <div class="card"><h3>💰 الأكثر ربحاً هذا الشهر</h3><div id="topProfit"></div></div>
     </div>
-    <div class="grid two">
-      <div class="card"><h3>📱 الوحدات هذا الشهر حسب الشركة</h3><div id="topProv"></div></div>
-      <div class="card"><h3>⚠️ منتجات قاربت على النفاد</h3><div id="lowStock"></div></div>
-    </div>
+    <div class="card"><h3>⚠️ منتجات قاربت على النفاد</h3><div id="lowStock"></div></div>
     <div class="grid two">
       <div class="card"><h3>🏷️ الربح حسب الصنف هذا الشهر</h3><div id="topTags"></div></div>
       <div class="card"><h3>🧾 آخر الفواتير</h3><div id="lastInv"></div></div>
@@ -282,7 +271,7 @@
   <section id="tab-box">
     <div id="boxStart" class="card form" style="display:none;max-width:560px">
       <h2>💰 بدء الصندوق</h2>
-      <p class="muted">اكتب كم يوجد في الصندوق الآن (النقود الموجودة معك). من هذه اللحظة: كل بيع (بضاعة أو وحدات) يدخل الصندوق، وكل شراء بضاعة أو شحن رصيد يُخصم منه تلقائياً.</p>
+      <p class="muted">اكتب كم يوجد في الصندوق الآن (النقود الموجودة معك). من هذه اللحظة: كل بيع يدخل الصندوق، وكل شراء بضاعة يُخصم منه تلقائياً.</p>
       <label>المبلغ الموجود الآن</label><input id="boxOpenAmt" type="number" step="any" min="0" inputmode="decimal">
       <button class="btn g big" style="margin-top:12px" onclick="startBox()">✔ بدء الصندوق</button>
     </div>
@@ -322,54 +311,6 @@
         <div id="boxMore" style="text-align:center;margin-top:10px"></div>
       </div>
       <div class="muted small" style="text-align:center"><a href="#" onclick="restartBox();return false">إعادة بدء الصندوق من جديد</a></div>
-    </div>
-  </section>
-
-  <!-- ============ الوحدات / الرصيد ============ -->
-  <section id="tab-topup">
-    <div class="grid stats" id="tuStats" style="margin-bottom:16px"></div>
-    <div class="grid two">
-      <div class="card form">
-        <h3>📱 عملية تعبئة وحدات / رصيد</h3>
-        <label>الشركة</label><select id="tuProv" onchange="tuCalc(true)"></select>
-        <div class="pair">
-          <div><label>عدد الوحدات</label><input id="tuUnits" type="number" step="any" min="0" inputmode="decimal" oninput="tuCalc(true)"></div>
-          <div><label>سعر المبيع للزبون (الإجمالي)</label><input id="tuPrice" type="number" step="any" min="0" inputmode="decimal" oninput="tuCalc(false)"></div>
-        </div>
-        <label>رقم الهاتف (اختياري)</label><input id="tuPhone" type="tel" inputmode="tel" dir="ltr" style="text-align:right">
-        <label>ملاحظة (اختياري)</label><input id="tuNote">
-        <div class="profit-box" id="tuInfo"></div>
-        <button class="btn g big" style="width:100%;margin-top:12px" onclick="saveTopup()">✔ تسجيل العملية</button>
-      </div>
-      <div class="card">
-        <div class="row"><h3 style="margin:0">رصيد المحل لدى الشركات</h3><div class="spacer"></div><button class="btn p" onclick="openProvModal()">➕ إضافة شركة</button></div>
-        <p class="muted small">عند شراء رصيد من الموزّع اضغط «شحن رصيد» لتحديث رصيدك وتكلفة الوحدة.</p>
-        <div id="provList"></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="row">
-        <h3 style="margin:0">عمليات الوحدات</h3><div class="spacer"></div>
-        <label class="muted small">من</label><input type="date" id="tuFrom" onchange="renderTopupList()">
-        <label class="muted small">إلى</label><input type="date" id="tuTo" onchange="renderTopupList()">
-        <button class="btn" onclick="tuFrom.value='';tuTo.value='';renderTopupList()">الكل</button>
-      </div>
-      <div class="tbl-wrap" style="margin-top:12px">
-        <table>
-          <thead><tr><th>رقم</th><th>التاريخ</th><th>الشركة</th><th>الرقم</th><th>الوحدات</th><th>المبيع</th><th>التكلفة</th><th>الربح</th><th></th></tr></thead>
-          <tbody id="tuBody"></tbody>
-          <tfoot id="tuFoot"></tfoot>
-        </table>
-      </div>
-    </div>
-    <div class="card">
-      <h3>شحنات رصيد المحل (مشتريات الوحدات)</h3>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>التاريخ</th><th>الشركة</th><th>الوحدات</th><th>المدفوع</th><th>تكلفة الوحدة</th><th>ملاحظة</th><th></th></tr></thead>
-          <tbody id="chBody"></tbody>
-        </table>
-      </div>
     </div>
   </section>
 
@@ -506,16 +447,6 @@
       </div>
     </div>
     <div class="card">
-      <h3>الوحدات حسب الشركة</h3>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>الشركة</th><th>عدد العمليات</th><th>الوحدات المباعة</th><th>المبيعات</th><th>التكلفة</th><th>الربح</th><th>الرصيد الحالي</th></tr></thead>
-          <tbody id="jardUnits"></tbody>
-          <tfoot id="jardUnitsFoot"></tfoot>
-        </table>
-      </div>
-    </div>
-    <div class="card">
       <div class="row">
         <h3 style="margin:0">جرد المخزون الفعلي</h3>
         <div class="spacer"></div>
@@ -533,64 +464,6 @@
     </div>
   </section>
 
-  <!-- ============ الأرباح بعملة ثانية ============ -->
-  <section id="tab-fx">
-    <div class="grid two">
-      <div class="card form">
-        <h3>💱 سعر الصرف</h3>
-        <div class="pair">
-          <div><label>العملة الثانية</label><input id="fxCur" placeholder="$"></div>
-          <div><label id="fxRateLbl">سعر الصرف</label><input id="fxRate" type="number" step="any" min="0" inputmode="decimal"></div>
-        </div>
-        <button class="btn p" style="margin-top:12px" onclick="saveRate()">حفظ سعر الصرف</button>
-        <div class="note">كل فاتورة وعملية وحدات تُحفظ مع سعر الصرف يوم حصولها، فتغيير السعر اليوم لا يغيّر حسابات الأيام السابقة.</div>
-        <div class="hist" id="fxHist"></div>
-      </div>
-      <div class="card">
-        <h3>طريقة التحويل</h3>
-        <div class="tabs2" id="fxModeTabs">
-          <button data-m="sale" class="active">حسب سعر الصرف يوم البيع</button>
-          <button data-m="current">حسب سعر الصرف الحالي</button>
-        </div>
-        <p class="muted small" id="fxModeTxt"></p>
-        <h3 style="margin-top:14px">الفترة</h3>
-        <div class="tabs2" id="fxTabs">
-          <button data-p="today">اليوم</button>
-          <button data-p="week">هذا الأسبوع</button>
-          <button data-p="lastWeek">الأسبوع الماضي</button>
-          <button data-p="month" class="active">هذا الشهر</button>
-          <button data-p="lastMonth">الشهر الماضي</button>
-          <button data-p="custom">فترة مخصصة</button>
-        </div>
-        <div class="row" id="fxCustom" style="display:none;margin-top:10px">
-          <label class="muted small">من</label><input type="date" id="fxFrom" onchange="renderFx()">
-          <label class="muted small">إلى</label><input type="date" id="fxTo" onchange="renderFx()">
-        </div>
-        <div class="muted" id="fxRangeTxt" style="margin-top:10px"></div>
-      </div>
-    </div>
-    <div class="grid stats" id="fxStats" style="margin-bottom:16px"></div>
-    <div class="card">
-      <h3>الأرباح يوماً بيوم</h3>
-      <div class="tbl-wrap">
-        <table>
-          <thead id="fxDayHead"></thead>
-          <tbody id="fxDays"></tbody>
-          <tfoot id="fxDaysFoot"></tfoot>
-        </table>
-      </div>
-    </div>
-    <div class="card">
-      <h3>ربح كل منتج في الفترة</h3>
-      <div class="tbl-wrap">
-        <table>
-          <thead id="fxProdHead"></thead>
-          <tbody id="fxProds"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
   <!-- ============ سجل العمليات ============ -->
   <section id="tab-audit">
     <div class="card">
@@ -603,7 +476,7 @@
         <input id="auSearch" placeholder="🔍 بحث" oninput="renderAudit(true)">
         <button class="btn" onclick="exportAudit()">⬇ تصدير CSV</button>
       </div>
-      <div class="muted small" style="margin-top:8px">كل عملية في النظام تُسجّل هنا تلقائياً مع وقتها وتفاصيلها (إضافة، تعديل أسعار، بيع، حذف، جرد، وحدات...).</div>
+      <div class="muted small" style="margin-top:8px">كل عملية في النظام تُسجّل هنا تلقائياً مع وقتها وتفاصيلها (إضافة، تعديل أسعار، بيع، شراء، حذف، جرد، صندوق...).</div>
     </div>
     <div class="card tbl-wrap">
       <table>
@@ -709,43 +582,6 @@
   </form>
 </div>
 
-<!-- نافذة الشركة -->
-<div class="modal" id="provModal">
-  <form class="box form" onsubmit="saveProvider(event)">
-    <h2 id="pvTitle">إضافة شركة</h2>
-    <label>اسم الشركة *</label><input id="pvName" required placeholder="مثال: سيريتل، MTN">
-    <div class="pair">
-      <div><label>تكلفة الوحدة الواحدة عليك</label><input id="pvCost" type="number" step="any" min="0" inputmode="decimal" required></div>
-      <div><label>سعر مبيع الوحدة للزبون</label><input id="pvPrice" type="number" step="any" min="0" inputmode="decimal" required></div>
-    </div>
-    <div id="pvBalWrap"><label>الرصيد الحالي (عدد الوحدات)</label><input id="pvBal" type="number" step="any" inputmode="decimal" value="0"></div>
-    <div class="note">تغيير الأسعار هنا ينطبق على العمليات الجديدة فقط.</div>
-    <div class="row" style="margin-top:16px">
-      <button class="btn g" type="submit">حفظ</button>
-      <button class="btn" type="button" onclick="closeModal('provModal')">إلغاء</button>
-    </div>
-  </form>
-</div>
-
-<!-- نافذة شحن رصيد -->
-<div class="modal" id="chargeModal">
-  <form class="box form" onsubmit="saveCharge(event)">
-    <h2>➕ شحن رصيد المحل</h2>
-    <div id="chInfo" class="muted"></div>
-    <div class="pair">
-      <div><label>عدد الوحدات المشتراة *</label><input id="chUnits" type="number" step="any" min="0" inputmode="decimal" required oninput="chCalc()"></div>
-      <div><label>المبلغ المدفوع للموزّع *</label><input id="chPaid" type="number" step="any" min="0" inputmode="decimal" required oninput="chCalc()"></div>
-    </div>
-    <label>ملاحظة</label><input id="chNote">
-    <label class="chk"><input type="checkbox" id="chFromBox" checked> 💰 دُفع المبلغ من الصندوق</label>
-    <div class="profit-box" id="chCalcBox"></div>
-    <div class="row" style="margin-top:16px">
-      <button class="btn g" type="submit">حفظ</button>
-      <button class="btn" type="button" onclick="closeModal('chargeModal')">إلغاء</button>
-    </div>
-  </form>
-</div>
-
 <!-- نافذة الكاميرا -->
 <!-- نافذة حركة صندوق -->
 <div class="modal" id="cashModal">
@@ -821,7 +657,7 @@ const KEY = 'mahal_inventory_v1';
 const DAYS = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 function defaultDB(){
   return {products:[], tags:[], sales:[], providers:[], topups:[], charges:[], audit:[], rates:[], purchases:[], cash:[],
-          nextInvoice:1, nextTopup:1, nextPurchase:1, settings:{shopName:'محلي', currency:'ل.س', cur2:'$', lowStock:3, curV2:1}};
+          nextInvoice:1, nextTopup:1, nextPurchase:1, settings:{shopName:'محلي', currency:'ل.س', lowStock:3, curV2:1}};
 }
 function normalize(d){
   const b = defaultDB(), r = {...b, ...d, settings:{...b.settings, ...(d.settings||{})}};
@@ -867,15 +703,9 @@ function fmtDateTime(d){ d = new Date(d); return fmtDate(d) + ' ' + d.toLocaleTi
 function inRange(list, from, to){ return list.filter(s => { const t = new Date(s.date); return t >= from && t < to; }); }
 function byDayFilter(list, from, to){ return list.filter(s => (!from || dayKey(s.date) >= from) && (!to || dayKey(s.date) <= to)); }
 const salesBetween = (f,t) => inRange(db.sales, f, t);
-const topupsBetween = (f,t) => inRange(db.topups, f, t);
 function sumSales(list){
   const r = {count:list.length, total:0, cost:0, profit:0, items:0};
   list.forEach(s => { r.total += s.total; r.cost += s.cost; r.profit += s.profit; s.items.forEach(i => r.items += i.qty); });
-  return r;
-}
-function sumTopups(list){
-  const r = {count:list.length, units:0, total:0, cost:0, profit:0};
-  list.forEach(t => { r.units += t.units; r.total += t.price; r.cost += t.cost; r.profit += t.profit; });
   return r;
 }
 function productStats(list){
@@ -886,15 +716,6 @@ function productStats(list){
     const o = m[k] || (m[k] = {pid:i.pid, name: cur ? cur.name : i.name, qty:0, revenue:0, cost:0, profit:0});
     o.qty += i.qty; o.revenue += i.price*i.qty; o.cost += i.cost*i.qty; o.profit += (i.price-i.cost)*i.qty;
   }));
-  return Object.values(m);
-}
-function providerStats(list){
-  const m = {};
-  list.forEach(t => {
-    const cur = db.providers.find(p => p.id === t.providerId);
-    const o = m[t.providerId] || (m[t.providerId] = {id:t.providerId, name: cur ? cur.name : t.providerName, count:0, units:0, total:0, cost:0, profit:0});
-    o.count++; o.units += t.units; o.total += t.price; o.cost += t.cost; o.profit += t.profit;
-  });
   return Object.values(m);
 }
 function stat(lbl, val, c='', sub=''){ return `<div class="stat ${c}"><div class="lbl">${lbl}</div><div class="val">${val}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`; }
@@ -945,8 +766,8 @@ async function saveFile(name, content, mime){
 
 /* ===================== التبويبات ===================== */
 let currentTab = 'dash';
-const RENDER = {dash:()=>renderDashboard(), sale:()=>renderCart(), purchases:()=>renderPurchase(), box:()=>renderBox(), topup:()=>renderTopup(), products:()=>renderProducts(), stock:()=>renderStock(), tags:()=>renderTags(),
-                invoices:()=>renderInvoices(), jard:()=>renderJard(), fx:()=>renderFx(), audit:()=>renderAudit(true), settings:()=>renderSettings()};
+const RENDER = {dash:()=>renderDashboard(), sale:()=>renderCart(), purchases:()=>renderPurchase(), box:()=>renderBox(), products:()=>renderProducts(), stock:()=>renderStock(), tags:()=>renderTags(),
+                invoices:()=>renderInvoices(), jard:()=>renderJard(), audit:()=>renderAudit(true), settings:()=>renderSettings()};
 function rerender(){ RENDER[currentTab](); }
 function showTab(t){
   currentTab = t;
@@ -961,27 +782,24 @@ $('#nav').addEventListener('click', e => { const b = e.target.closest('[data-tab
 /* ===================== لوحة الإحصائيات ===================== */
 function renderDashboard(){
   const now = new Date(), today = startOfDay(now), tomorrow = addDays(today, 1);
-  const per = from => ({s:sumSales(salesBetween(from, tomorrow)), u:sumTopups(topupsBetween(from, tomorrow))});
+  const per = from => sumSales(salesBetween(from, tomorrow));
   const t = per(today), w = per(startOfWeek(now)), m = per(startOfMonth(now));
   const capital = db.products.reduce((a,p) => a + stockVal(p), 0);
-  const unitsVal = db.providers.reduce((a,p) => a + p.unitCost * Math.max(p.balance,0), 0);
-  const split = x => `بضاعة ${num(x.s.profit)} + وحدات ${num(x.u.profit)}`;
   $('#dashStats').innerHTML =
-    stat('مبيعات البضاعة اليوم', money(t.s.total), '', `${t.s.count} فاتورة — ${num(t.s.items)} قطعة`) +
-    stat('مبيعات الوحدات اليوم', money(t.u.total), 'v', `${t.u.count} عملية — ${num(t.u.units)} وحدة`) +
-    stat('صافي ربح اليوم', money(t.s.profit + t.u.profit), 'g', split(t)) +
-    stat('مبيعات الأسبوع', money(w.s.total + w.u.total)) +
-    stat('ربح الأسبوع', money(w.s.profit + w.u.profit), 'g', split(w)) +
-    stat('مبيعات الشهر', money(m.s.total + m.u.total)) +
-    stat('ربح الشهر', money(m.s.profit + m.u.profit), 'g', split(m)) +
-    stat('رأس المال في المخزون', money(capital), 'o', unitsVal ? `+ رصيد وحدات بقيمة ${num(unitsVal)}` : '') + boxStats(capital + unitsVal);
+    stat('مبيعات اليوم', money(t.total), '', `${t.count} فاتورة — ${num(t.items)} قطعة`) +
+    stat('ربح اليوم', money(t.profit), 'g') +
+    stat('مبيعات الأسبوع', money(w.total)) +
+    stat('ربح الأسبوع', money(w.profit), 'g') +
+    stat('مبيعات الشهر', money(m.total)) +
+    stat('ربح الشهر', money(m.profit), 'g') +
+    stat('رأس المال في المخزون', money(capital), 'o') + boxStats(capital);
 
   // رسم المبيعات اليومية
   const days = [];
   for(let i = 13; i >= 0; i--){
     const d = addDays(today, -i), e = addDays(d, 1);
-    const s = sumSales(salesBetween(d, e)), u = sumTopups(topupsBetween(d, e));
-    days.push({d, total:s.total+u.total, profit:s.profit+u.profit, count:s.count+u.count});
+    const s = sumSales(salesBetween(d, e));
+    days.push({d, total:s.total, profit:s.profit, count:s.count});
   }
   const max = Math.max(1, ...days.map(x => x.total));
   $('#dayChart').innerHTML = days.map(x => {
@@ -1001,8 +819,6 @@ function renderDashboard(){
   const ps = productStats(salesBetween(startOfMonth(now), tomorrow));
   $('#topQty').innerHTML = hbars([...ps].sort((a,b)=>b.qty-a.qty).slice(0,6), 'qty', '', x => num(x.qty) + ' قطعة', 'لا توجد مبيعات بعد هذا الشهر');
   $('#topProfit').innerHTML = hbars([...ps].sort((a,b)=>b.profit-a.profit).slice(0,6), 'profit', 'g', x => money(x.profit), 'لا توجد مبيعات بعد هذا الشهر');
-  const pv = providerStats(topupsBetween(startOfMonth(now), tomorrow)).sort((a,b)=>b.total-a.total);
-  $('#topProv').innerHTML = hbars(pv, 'total', 'v', x => `${num(x.units)} وحدة — ربح ${money(x.profit)}`, 'لا توجد عمليات وحدات هذا الشهر');
 
   const ts = tagStats(salesBetween(startOfMonth(now), tomorrow)).filter(x => x.qty).sort((a,b)=>b.profit-a.profit);
   $('#topTags').innerHTML = ts.length ? (() => { const mx = Math.max(1, ...ts.map(x => x.profit));
@@ -1072,7 +888,7 @@ function checkout(){
     return {pid:i.pid, name:i.name, barcode:i.barcode, qty:i.qty, price:i.price, cost:i.cost, recipe: p && p.recipe ? p.recipe.map(r => ({pid:r.pid, qty:r.qty})) : undefined}; });
   const total = r2(items.reduce((a,i)=>a+i.price*i.qty,0));
   const cost = r2(items.reduce((a,i)=>a+i.cost*i.qty,0));
-  const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), items, total, cost, profit:r2(total-cost), rate:currentRate()};
+  const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), items, total, cost, profit:r2(total-cost)};
   items.forEach(i => applyStock(i.pid, i.qty, i.recipe, -1));
   db.sales.push(sale);
   audit('sale', `فاتورة بيع #${sale.no}`, `الإجمالي ${num(total)} — الربح ${num(sale.profit)} — ` + items.map(i => `${i.name} ×${num(i.qty)} بسعر ${num(i.price)}`).join('، '));
@@ -1739,7 +1555,8 @@ function deletePurchase(id){
 
 /* ===================== الصندوق ===================== */
 const CASH_LBL = {open:'رصيد افتتاحي', deposit:'إيداع', withdraw:'سحب شخصي', expense:'مصروف', adjust:'تسوية جرد الصندوق'};
-// كل حركات الصندوق منذ بدئه: المبيعات والوحدات تدخل، المشتريات وشحن الرصيد تخرج، إضافة للحركات اليدوية
+// كل حركات الصندوق منذ بدئه: المبيعات تدخل، المشتريات تخرج، إضافة للحركات اليدوية
+// (عمليات الوحدات وشحن الرصيد القديمة — قبل إزالة صفحة الوحدات — تبقى محسوبة كما حدثت فعلاً)
 function cashMoves(){
   if(!db.settings.cashStart) return [];
   const st = new Date(db.settings.cashStart), after = d => new Date(d) >= st, mv = [];
@@ -1755,12 +1572,12 @@ function boxStats(otherCapital){
   if(!db.settings.cashStart) return '';
   const bal = cashBalance();
   return stat('💰 رصيد الصندوق', `<span class="${bal < 0 ? 'neg' : ''}">${money(bal)}</span>`, 'v') +
-         stat('رأس المال الكلي', money(otherCapital + bal), 'o', 'بضاعة + وحدات + صندوق');
+         stat('رأس المال الكلي', money(otherCapital + bal), 'o', 'بضاعة + صندوق');
 }
 function boxDay(d){
   const from = startOfDay(d), to = addDays(from, 1);
-  const sl = sumSales(salesBetween(from, to)), ul = sumTopups(topupsBetween(from, to));
-  const r = {sl, ul, gross:sl.total + ul.total, profit:sl.profit + ul.profit, before:0, pur:0, exp:0, dep:0, net:0, from, to};
+  const sl = sumSales(salesBetween(from, to));
+  const r = {sl, gross:sl.total, profit:sl.profit, before:0, pur:0, exp:0, dep:0, net:0, from, to};
   cashMoves().forEach(m => {
     const t = new Date(m.date);
     if(t < from || (m.kind === 'open' && t < to)) r.before += m.amount; // الرصيد الافتتاحي = رصيد أول اليوم
@@ -1783,13 +1600,13 @@ function renderBox(){
   if(!$('#boxDay').value) $('#boxDay').value = dayKey(new Date());
   if(!started) return;
   const mv = cashMoves(), bal = mv.reduce((a,m) => a + m.amount, 0);
-  const stock = db.products.reduce((a,p) => a + stockVal(p), 0), units = db.providers.reduce((a,p) => a + p.unitCost * Math.max(p.balance,0), 0);
+  const stock = db.products.reduce((a,p) => a + stockVal(p), 0);
   $('#boxBal').innerHTML = `<span class="${bal < 0 ? 'neg' : ''}">${money(bal)}</span>`;
-  $('#boxCapTxt').innerHTML = `رأس المال الكلي: <b>${money(stock + units + bal)}</b> = بضاعة ${num(stock)}${units ? ' + رصيد وحدات ' + num(units) : ''} + صندوق ${num(bal)} — منذ ${fmtDateTime(db.settings.cashStart)}`;
+  $('#boxCapTxt').innerHTML = `رأس المال الكلي: <b>${money(stock + bal)}</b> = بضاعة ${num(stock)} + صندوق ${num(bal)} — منذ ${fmtDateTime(db.settings.cashStart)}`;
   const d = boxDay(parseDay($('#boxDay').value));
   $('#boxDayStats').innerHTML =
-    stat('الغلة (المبيع)', money(d.gross), '', `بضاعة ${num(d.sl.total)} + وحدات ${num(d.ul.total)}`) +
-    stat('الربح', money(d.profit), 'g', `${d.sl.count} فاتورة + ${d.ul.count} عملية وحدات`) +
+    stat('الغلة (المبيع)', money(d.gross), '', `${d.sl.count} فاتورة — ${num(d.sl.items)} قطعة`) +
+    stat('الربح', money(d.profit), 'g') +
     stat('مشتريات من الصندوق', money(d.pur), 'o') +
     stat('مصاريف وسحوبات', money(d.exp), 'r') +
     (d.dep ? stat('إيداعات', money(d.dep)) : '') +
@@ -1880,9 +1697,7 @@ function printBoxDay(){
   const mv = cashMoves().filter(m => { const t = new Date(m.date); return t >= d.from && t < d.to && m.kind !== 'sale' && m.kind !== 'topup'; });
   printHTML(`<h2 style="text-align:center">${esc(db.settings.shopName)} — تقفيل يوم ${DAYS[d.from.getDay()]} ${fmtDate(d.from)}</h2>
     <table>
-      <tr><td>الغلة (المبيع)</td><td><b>${money(d.gross)}</b></td></tr>
-      <tr><td>  بضاعة (${d.sl.count} فاتورة)</td><td>${money(d.sl.total)}</td></tr>
-      <tr><td>  وحدات (${d.ul.count} عملية)</td><td>${money(d.ul.total)}</td></tr>
+      <tr><td>الغلة (المبيع) — ${d.sl.count} فاتورة</td><td><b>${money(d.gross)}</b></td></tr>
       <tr><td>الربح</td><td><b>${money(d.profit)}</b></td></tr>
       <tr><td>مشتريات من الصندوق</td><td>${money(d.pur)}</td></tr>
       <tr><td>مصاريف وسحوبات</td><td>${money(d.exp)}</td></tr>
@@ -1890,158 +1705,6 @@ function printBoxDay(){
       <tr><td>رصيد آخر اليوم</td><td><b>${money(d.after)}</b></td></tr>
     </table>
     ${mv.length ? `<h3>الحركات الأخرى</h3><table>${mv.map(m => `<tr><td>${fmtDateTime(m.date)}</td><td>${esc(m.text)}</td><td>${num(m.amount)}</td></tr>`).join('')}</table>` : ''}`);
-}
-
-/* ===================== الوحدات / الرصيد ===================== */
-function renderTopup(){
-  const now = new Date(), today = startOfDay(now), tomorrow = addDays(today,1);
-  const t = sumTopups(topupsBetween(today, tomorrow)), m = sumTopups(topupsBetween(startOfMonth(now), tomorrow));
-  const bal = db.providers.reduce((a,p)=>a+p.unitCost*Math.max(p.balance,0),0);
-  $('#tuStats').innerHTML = stat('وحدات اليوم', num(t.units), 'v', `${t.count} عملية`) + stat('مبيع الوحدات اليوم', money(t.total), 'v') +
-    stat('ربح الوحدات اليوم', money(t.profit), 'g') + stat('ربح الوحدات هذا الشهر', money(m.profit), 'g', `مبيعات ${num(m.total)} — ${num(m.units)} وحدة`) +
-    stat('قيمة رصيد الوحدات الحالي', money(bal), 'o');
-  const sel = $('#tuProv'), cur = sel.value;
-  sel.innerHTML = db.providers.length ? db.providers.map(p => `<option value="${p.id}">${esc(p.name)} (الرصيد: ${num(p.balance)})</option>`).join('') : '<option value="">— أضف شركة أولاً —</option>';
-  if(cur && db.providers.some(p => p.id === cur)) sel.value = cur;
-  tuCalc(false);
-  $('#provList').innerHTML = db.providers.length ? db.providers.map(p => `<div class="prov">
-      <div class="row"><b style="font-size:16px">${esc(p.name)}</b><div class="spacer"></div>
-        <button class="btn-icon" onclick="openChargeModal('${p.id}')">➕ شحن رصيد</button>
-        <button class="btn-icon" onclick="openProvModal('${p.id}')">✏️</button>
-        <button class="btn-icon danger" onclick="deleteProvider('${p.id}')">🗑</button></div>
-      <div class="prov-grid">
-        <div><span>الرصيد</span><b class="${p.balance < 0 ? 'neg' : ''}">${num(p.balance)} وحدة</b></div>
-        <div><span>تكلفة الوحدة</span><b>${numU(p.unitCost)}</b></div>
-        <div><span>مبيع الوحدة</span><b>${numU(p.unitPrice)}</b></div>
-        <div><span>قيمة الرصيد</span><b>${money(p.unitCost*Math.max(p.balance,0))}</b></div>
-      </div></div>`).join('')
-    : '<div class="muted">لا توجد شركات بعد. أضف شركة (مثلاً سيريتل أو MTN) مع تكلفة الوحدة وسعر مبيعها.</div>';
-  renderTopupList();
-}
-function tuCalc(auto){
-  const p = db.providers.find(x => x.id === $('#tuProv').value);
-  const units = parseFloat($('#tuUnits').value) || 0;
-  if(!p){ $('#tuInfo').innerHTML = 'أضف شركة من القائمة المجاورة لتبدأ.'; return; }
-  if(auto) $('#tuPrice').value = units ? r2(units * p.unitPrice) : '';
-  const price = parseFloat($('#tuPrice').value) || 0, cost = r2(units * p.unitCost), profit = price - cost;
-  const after = p.balance - units;
-  $('#tuInfo').innerHTML = `التكلفة عليك: <b>${money(cost)}</b> &nbsp;|&nbsp; الربح: <b class="${pcls(profit)}">${money(profit)}</b><br>
-    الرصيد بعد العملية: <b class="${after < 0 ? 'neg' : ''}">${num(after)} وحدة</b>`;
-}
-function saveTopup(){
-  const p = db.providers.find(x => x.id === $('#tuProv').value);
-  if(!p) return alert('أضف شركة أولاً');
-  const units = r2($('#tuUnits').value), price = r2($('#tuPrice').value);
-  if(!(units > 0)) return alert('اكتب عدد الوحدات');
-  if(units > p.balance && !confirm(`رصيدك لدى ${p.name} هو ${num(p.balance)} وحدة فقط.\nهل تريد المتابعة؟`)) return;
-  const cost = r2(units * p.unitCost);
-  const t = {id:uid(), no:db.nextTopup++, date:new Date().toISOString(), providerId:p.id, providerName:p.name,
-             phone:$('#tuPhone').value.trim(), note:$('#tuNote').value.trim(), units, price, cost, profit:r2(price - cost), unitCost:p.unitCost, rate:currentRate()};
-  p.balance = r2(p.balance - units);
-  db.topups.push(t);
-  audit('topup', `عملية وحدات #${t.no} — ${p.name}`, `${num(units)} وحدة — المبيع ${num(price)} — التكلفة ${num(cost)} — الربح ${num(t.profit)}${t.phone ? ' — الرقم ' + t.phone : ''} — الرصيد المتبقي ${num(p.balance)}`);
-  save(); beep(true);
-  $('#tuUnits').value = ''; $('#tuPrice').value = ''; $('#tuPhone').value = ''; $('#tuNote').value = '';
-  toast(`✔ تم تسجيل ${num(units)} وحدة — ربح ${num(t.profit)}`);
-  renderTopup();
-}
-function renderTopupList(){
-  const list = byDayFilter(db.topups, $('#tuFrom').value, $('#tuTo').value).slice().reverse();
-  const s = sumTopups(list);
-  $('#tuBody').innerHTML = list.length ? list.slice(0, 300).map(t => `<tr>
-      <td>#${t.no}</td><td class="small">${fmtDateTime(t.date)}</td><td>${esc(t.providerName)}</td>
-      <td dir="ltr" style="text-align:right">${esc(t.phone || '—')}</td><td>${num(t.units)}</td><td>${money(t.price)}</td><td>${money(t.cost)}</td>
-      <td class="${pcls(t.profit)}">${money(t.profit)}</td>
-      <td><button class="btn-icon danger" onclick="deleteTopup('${t.id}')">🗑</button></td></tr>`).join('')
-    : '<tr><td colspan="9" class="empty">لا توجد عمليات</td></tr>';
-  $('#tuFoot').innerHTML = list.length ? `<tr><td colspan="4">المجموع (${s.count} عملية)</td><td>${num(s.units)}</td><td>${money(s.total)}</td><td>${money(s.cost)}</td><td>${money(s.profit)}</td><td></td></tr>` : '';
-  const ch = db.charges.slice().reverse().slice(0, 100);
-  $('#chBody').innerHTML = ch.length ? ch.map(c => `<tr><td class="small">${fmtDateTime(c.date)}</td><td>${esc(c.providerName)}</td><td>${num(c.units)}</td><td>${money(c.paid)}</td>
-      <td>${numU(c.units ? c.paid / c.units : 0)}</td><td class="muted small">${esc(c.note || '')}</td>
-      <td><button class="btn-icon danger" onclick="deleteCharge('${c.id}')">🗑</button></td></tr>`).join('')
-    : '<tr><td colspan="7" class="empty">لا توجد شحنات بعد</td></tr>';
-}
-function deleteTopup(id){
-  const t = db.topups.find(x => x.id === id);
-  if(!confirm(`حذف عملية الوحدات #${t.no}؟\nسيتم إرجاع ${num(t.units)} وحدة إلى رصيد ${t.providerName}.`)) return;
-  const p = db.providers.find(x => x.id === t.providerId); if(p) p.balance = r2(p.balance + t.units);
-  db.topups = db.topups.filter(x => x.id !== id);
-  audit('topup', `حذف عملية وحدات #${t.no} — ${t.providerName}`, `${num(t.units)} وحدة — المبيع ${num(t.price)} — الربح ${num(t.profit)} (أُعيدت الوحدات للرصيد)`);
-  save(); renderTopup();
-}
-let provEditId = null;
-function openProvModal(id){
-  provEditId = id || null;
-  const p = id ? db.providers.find(x => x.id === id) : null;
-  $('#pvTitle').textContent = p ? 'تعديل شركة' : 'إضافة شركة';
-  $('#pvName').value = p ? p.name : ''; $('#pvCost').value = p ? p.unitCost : ''; $('#pvPrice').value = p ? p.unitPrice : '';
-  $('#pvBal').value = p ? p.balance : 0;
-  openModal('provModal'); focusIfDesktop($('#pvName'));
-}
-function saveProvider(e){
-  e.preventDefault();
-  const name = $('#pvName').value.trim(), unitCost = r4($('#pvCost').value), unitPrice = r4($('#pvPrice').value), balance = r2($('#pvBal').value);
-  if(!name) return;
-  if(provEditId){
-    const p = db.providers.find(x => x.id === provEditId);
-    const ch = [];
-    if(p.name !== name) ch.push(`الاسم: من ${p.name} إلى ${name}`);
-    if(p.unitCost !== unitCost) ch.push(`تكلفة الوحدة: من ${numU(p.unitCost)} إلى ${numU(unitCost)}`);
-    if(p.unitPrice !== unitPrice) ch.push(`مبيع الوحدة: من ${numU(p.unitPrice)} إلى ${numU(unitPrice)}`);
-    if(p.balance !== balance) ch.push(`الرصيد (تعديل يدوي): من ${num(p.balance)} إلى ${num(balance)}`);
-    Object.assign(p, {name, unitCost, unitPrice, balance});
-    if(ch.length) audit('balance', 'تعديل شركة: ' + name, ch.join('، '));
-  } else {
-    db.providers.push({id:uid(), name, unitCost, unitPrice, balance, created:new Date().toISOString()});
-    audit('balance', 'إضافة شركة: ' + name, `تكلفة الوحدة ${numU(unitCost)} — مبيع الوحدة ${numU(unitPrice)} — الرصيد الافتتاحي ${num(balance)}`);
-  }
-  save(); closeModal('provModal'); renderTopup(); toast('تم الحفظ');
-}
-function deleteProvider(id){
-  const p = db.providers.find(x => x.id === id);
-  if(!confirm(`حذف الشركة "${p.name}"؟\n(العمليات القديمة تبقى محفوظة)`)) return;
-  db.providers = db.providers.filter(x => x.id !== id);
-  audit('balance', 'حذف شركة: ' + p.name, `الرصيد وقت الحذف ${num(p.balance)} وحدة`);
-  save(); renderTopup();
-}
-let chargeProvId = null;
-function openChargeModal(id){
-  chargeProvId = id;
-  const p = db.providers.find(x => x.id === id);
-  $('#chInfo').innerHTML = `<b>${esc(p.name)}</b> — الرصيد الحالي: ${num(p.balance)} وحدة — تكلفة الوحدة: ${numU(p.unitCost)}`;
-  $('#chUnits').value = ''; $('#chPaid').value = ''; $('#chNote').value = ''; $('#chFromBox').checked = true;
-  chCalc(); openModal('chargeModal'); focusIfDesktop($('#chUnits'));
-}
-function chargeAvg(p, units, paid){
-  const old = Math.max(p.balance, 0);
-  return old + units > 0 ? r4((old * p.unitCost + paid) / (old + units)) : p.unitCost;
-}
-function chCalc(){
-  const p = db.providers.find(x => x.id === chargeProvId); if(!p) return;
-  const units = parseFloat($('#chUnits').value) || 0, paid = parseFloat($('#chPaid').value) || 0;
-  $('#chCalcBox').innerHTML = units ? `تكلفة الوحدة في هذه الشحنة: <b>${numU(paid/units)}</b><br>
-    الرصيد بعد الشحن: <b>${num(p.balance + units)} وحدة</b><br>
-    متوسط تكلفة الوحدة الجديد: <b>${numU(chargeAvg(p, units, paid))}</b> <span class="muted small">(يُطبّق على العمليات الجديدة فقط)</span>` : 'اكتب عدد الوحدات والمبلغ المدفوع.';
-}
-function saveCharge(e){
-  e.preventDefault();
-  const p = db.providers.find(x => x.id === chargeProvId);
-  const units = r2($('#chUnits').value), paid = r2($('#chPaid').value);
-  if(!(units > 0)) return alert('اكتب عدد الوحدات');
-  const oldCost = p.unitCost, oldBal = p.balance;
-  p.unitCost = chargeAvg(p, units, paid);
-  p.balance = r2(p.balance + units);
-  db.charges.push({id:uid(), date:new Date().toISOString(), providerId:p.id, providerName:p.name, units, paid, note:$('#chNote').value.trim(), fromBox:$('#chFromBox').checked});
-  audit('balance', `شحن رصيد ${p.name}`, `${num(units)} وحدة بمبلغ ${num(paid)} — الرصيد: من ${num(oldBal)} إلى ${num(p.balance)} — تكلفة الوحدة: من ${numU(oldCost)} إلى ${numU(p.unitCost)}`);
-  save(); closeModal('chargeModal'); renderTopup(); toast('✔ تم شحن الرصيد');
-}
-function deleteCharge(id){
-  const c = db.charges.find(x => x.id === id);
-  if(!confirm(`حذف شحنة ${num(c.units)} وحدة لـ ${c.providerName}؟\nسيتم خصمها من الرصيد.`)) return;
-  const p = db.providers.find(x => x.id === c.providerId); if(p) p.balance = r2(p.balance - c.units);
-  db.charges = db.charges.filter(x => x.id !== id);
-  audit('balance', `حذف شحنة رصيد ${c.providerName}`, `${num(c.units)} وحدة بمبلغ ${num(c.paid)} (خُصمت من الرصيد)`);
-  save(); renderTopup();
 }
 
 /* ===================== الفواتير ===================== */
@@ -2106,22 +1769,18 @@ function periodRange(period, fromId, toId){
 const jardRange = () => periodRange(jardPeriod, 'jFrom', 'jTo');
 function jardData(){
   const [from, to, label] = jardRange();
-  const list = salesBetween(from, to), tus = topupsBetween(from, to);
-  return {from, to, label, sum:sumSales(list), ps:productStats(list).sort((a,b)=>b.qty-a.qty), us:sumTopups(tus), pv:providerStats(tus).sort((a,b)=>b.total-a.total)};
+  const list = salesBetween(from, to);
+  return {from, to, label, sum:sumSales(list), ps:productStats(list).sort((a,b)=>b.qty-a.qty)};
 }
 function renderJard(){
   $('#jardPrintBtn').textContent = PRINT_LBL + ' تقرير الجرد';
-  const {from, to, label, sum, ps, us, pv} = jardData();
+  const {from, to, label, sum, ps} = jardData();
   $('#jardRangeTxt').innerHTML = `الفترة: <b>${label}</b> — من ${fmtDate(from)} إلى ${fmtDate(addDays(to,-1))}`;
   const capital = db.products.reduce((a,p)=>a+stockVal(p),0);
   $('#jardStats').innerHTML =
-    stat('مبيعات البضاعة', money(sum.total), '', `${sum.count} فاتورة — ${num(sum.items)} قطعة`) +
+    stat('المبيعات', money(sum.total), '', `${sum.count} فاتورة — ${num(sum.items)} قطعة`) +
     stat('رأس مال البضاعة المباعة', money(sum.cost), 'o') +
-    stat('ربح البضاعة', money(sum.profit), 'g') +
-    stat('مبيعات الوحدات', money(us.total), 'v', `${us.count} عملية — ${num(us.units)} وحدة`) +
-    stat('ربح الوحدات', money(us.profit), 'g') +
-    stat('إجمالي المبيعات', money(sum.total + us.total)) +
-    stat('صافي الربح الكلي', money(sum.profit + us.profit), 'g') +
+    stat('صافي الربح', money(sum.profit), 'g') +
     stat('رأس المال الحالي بالمخزون', money(capital), 'o') + (() => {
       const pus = inRange(db.purchases, from, to), exps = inRange(db.cash.filter(c => c.type === 'expense' || c.type === 'withdraw'), from, to);
       return stat('المشتريات', money(pus.reduce((a,x) => a + x.total, 0)), 'o', `${pus.length} فاتورة شراء`) +
@@ -2130,11 +1789,6 @@ function renderJard(){
   $('#jardSales').innerHTML = ps.length ? ps.map((x,i) => `<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${num(x.qty)}</td><td>${money(x.revenue)}</td><td>${money(x.cost)}</td><td class="${pcls(x.profit)}">${money(x.profit)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">لا توجد مبيعات في هذه الفترة</td></tr>';
   $('#jardSalesFoot').innerHTML = ps.length ? `<tr><td></td><td>المجموع</td><td>${num(sum.items)}</td><td>${money(sum.total)}</td><td>${money(sum.cost)}</td><td>${money(sum.profit)}</td></tr>` : '';
-  $('#jardUnits').innerHTML = pv.length || db.providers.length ? [...pv, ...db.providers.filter(p => !pv.some(x => x.id === p.id)).map(p => ({id:p.id, name:p.name, count:0, units:0, total:0, cost:0, profit:0}))]
-      .map(x => { const p = db.providers.find(y => y.id === x.id);
-        return `<tr><td>${esc(x.name)}</td><td>${x.count}</td><td>${num(x.units)}</td><td>${money(x.total)}</td><td>${money(x.cost)}</td><td class="${pcls(x.profit)}">${money(x.profit)}</td><td>${p ? num(p.balance) + ' وحدة' : '—'}</td></tr>`; }).join('')
-    : '<tr><td colspan="7" class="empty">لا توجد عمليات وحدات</td></tr>';
-  $('#jardUnitsFoot').innerHTML = pv.length ? `<tr><td>المجموع</td><td>${us.count}</td><td>${num(us.units)}</td><td>${money(us.total)}</td><td>${money(us.cost)}</td><td>${money(us.profit)}</td><td></td></tr>` : '';
 
   const mu = materialUsage(from, to).sort((a,b) => b.cost - a.cost);
   $('#jardUse').innerHTML = mu.length ? mu.map(x => `<tr><td><b>${esc(x.m.name)}</b></td><td>${num(x.used)} ${esc(unitOf(x.m))}</td><td>${money(x.cost)}</td>
@@ -2173,125 +1827,20 @@ function applyCount(){
   save(); renderJard(); toast('✔ تم اعتماد الجرد');
 }
 function printJard(){
-  const {from, to, label, sum, ps, us, pv} = jardData();
+  const {from, to, label, sum, ps} = jardData();
   const prods = db.products.filter(p => !p.recipe).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   const capital = prods.reduce((a,p)=>a+stockVal(p),0);
   printHTML(`<h2 style="text-align:center">${esc(db.settings.shopName)} — تقرير الجرد (${label})</h2>
     <p style="text-align:center">من ${fmtDate(from)} إلى ${fmtDate(addDays(to,-1))} — ${fmtDateTime(new Date())}</p>
     <table><tr><th>البند</th><th>المبيعات</th><th>التكلفة</th><th>الربح</th></tr>
-    <tr><td>البضاعة (${sum.count} فاتورة)</td><td>${money(sum.total)}</td><td>${money(sum.cost)}</td><td>${money(sum.profit)}</td></tr>
-    <tr><td>الوحدات (${us.count} عملية)</td><td>${money(us.total)}</td><td>${money(us.cost)}</td><td>${money(us.profit)}</td></tr>
-    <tr><td><b>المجموع</b></td><td><b>${money(sum.total+us.total)}</b></td><td><b>${money(sum.cost+us.cost)}</b></td><td><b>${money(sum.profit+us.profit)}</b></td></tr></table>
+    <tr><td>البضاعة (${sum.count} فاتورة)</td><td><b>${money(sum.total)}</b></td><td>${money(sum.cost)}</td><td><b>${money(sum.profit)}</b></td></tr></table>
     <p>رأس المال الحالي بالمخزون: ${money(capital)}</p>
     <h3 style="margin-top:18px">المبيعات حسب المنتج</h3>
     <table><tr><th>#</th><th>المنتج</th><th>الكمية</th><th>المبيعات</th><th>رأس المال</th><th>الربح</th></tr>
     ${ps.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${num(x.qty)}</td><td>${money(x.revenue)}</td><td>${money(x.cost)}</td><td>${money(x.profit)}</td></tr>`).join('') || '<tr><td colspan="6">لا توجد مبيعات</td></tr>'}</table>
-    ${pv.length ? `<h3 style="margin-top:18px">الوحدات حسب الشركة</h3>
-    <table><tr><th>الشركة</th><th>العمليات</th><th>الوحدات</th><th>المبيعات</th><th>الربح</th></tr>
-    ${pv.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.count}</td><td>${num(x.units)}</td><td>${money(x.total)}</td><td>${money(x.profit)}</td></tr>`).join('')}</table>` : ''}
     <h3 style="margin-top:18px">ورقة جرد المخزون</h3>
     <table><tr><th>المنتج</th><th>الكمية بالنظام</th><th>سعر التكلفة</th><th>رأس المال</th><th style="width:110px">الكمية الفعلية</th></tr>
     ${prods.map(p=>`<tr><td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(stockVal(p))}</td><td></td></tr>`).join('')}</table>`);
-}
-
-/* ===================== الأرباح بعملة ثانية ===================== */
-let fxPeriod = 'month', fxMode = 'sale';
-const cur2 = () => esc(db.settings.cur2 || '$');
-const money2 = n => num(n) + ' ' + cur2();
-function currentRate(){ const r = db.rates[db.rates.length - 1]; return r ? r.rate : 0; }
-function rateAt(date){ // سعر الصرف الذي كان سارياً في تاريخ معيّن
-  const t = new Date(date); let r = 0;
-  for(const x of db.rates){ if(new Date(x.date) <= t) r = x.rate; else break; }
-  return r || (db.rates[0] ? db.rates[0].rate : 0);
-}
-function recRate(rec){ return fxMode === 'current' ? currentRate() : (rec.rate || rateAt(rec.date)); }
-const toFx = (amount, rate) => rate ? amount / rate : 0;
-function fxTabs(id, key, cb){
-  $(id).addEventListener('click', e => {
-    const b = e.target.closest('button'); if(!b || !b.dataset[key]) return;
-    document.querySelectorAll(id + ' button').forEach(x => x.classList.toggle('active', x === b));
-    cb(b.dataset[key]);
-  });
-}
-fxTabs('#fxTabs', 'p', v => {
-  fxPeriod = v;
-  $('#fxCustom').style.display = v === 'custom' ? 'flex' : 'none';
-  if(v === 'custom' && !$('#fxFrom').value){ $('#fxFrom').value = dayKey(startOfMonth(new Date())); $('#fxTo').value = dayKey(new Date()); }
-  renderFx();
-});
-fxTabs('#fxModeTabs', 'm', v => { fxMode = v; renderFx(); });
-function renderFx(){
-  const C = esc(db.settings.currency), rate = currentRate();
-  if(document.activeElement !== $('#fxCur')) $('#fxCur').value = db.settings.cur2 || '$';
-  $('#fxRateLbl').textContent = `1 ${db.settings.cur2 || '$'} = كم ${db.settings.currency}؟`;
-  if(document.activeElement !== $('#fxRate')) $('#fxRate').value = rate || '';
-  $('#fxHist').innerHTML = db.rates.length ? `<b>سجل أسعار الصرف</b><table><tr><th>التاريخ</th><th>1 ${cur2()} =</th><th></th></tr>${db.rates.slice().reverse().slice(0,60).map(r => `<tr><td>${fmtDateTime(r.date)}</td><td>${num(r.rate)} ${C}</td><td><button class="btn-icon danger" onclick="deleteRate('${r.id}')">🗑</button></td></tr>`).join('')}</table>` : '';
-  $('#fxModeTxt').innerHTML = fxMode === 'sale'
-    ? 'كل فاتورة تُحوّل بسعر الصرف الذي كان يوم بيعها — هذا يعطيك ربحك الحقيقي.'
-    : `كل المبالغ تُحوّل بسعر اليوم: 1 ${cur2()} = ${num(rate)} ${C} — يفيد لمعرفة قيمة أرباحك الآن.`;
-  const [from, to, label] = periodRange(fxPeriod, 'fxFrom', 'fxTo');
-  $('#fxRangeTxt').innerHTML = `الفترة: <b>${label}</b> — من ${fmtDate(from)} إلى ${fmtDate(addDays(to,-1))}`;
-  $('#fxDayHead').innerHTML = `<tr><th>اليوم</th><th>المبيعات (${C})</th><th>الربح (${C})</th><th>سعر الصرف</th><th>المبيعات (${cur2()})</th><th>الربح (${cur2()})</th></tr>`;
-  $('#fxProdHead').innerHTML = `<tr><th>المنتج</th><th>الكمية</th><th>الربح (${C})</th><th>الربح (${cur2()})</th></tr>`;
-  if(!db.rates.length){
-    $('#fxStats').innerHTML = `<div class="card" style="grid-column:1/-1;margin:0">⬆ اكتب سعر الصرف أولاً (كم ${C} يساوي 1 ${cur2()}) ثم اضغط «حفظ سعر الصرف».</div>`;
-    ['#fxDays','#fxDaysFoot','#fxProds'].forEach(x => $(x).innerHTML = '');
-    return;
-  }
-  const sales = salesBetween(from, to), tus = topupsBetween(from, to);
-  const g = {total:0, profit:0, fxT:0, fxP:0}, u = {total:0, profit:0, fxT:0, fxP:0}, days = {}, prods = {};
-  const day = d => days[d] || (days[d] = {total:0, profit:0, fxT:0, fxP:0});
-  sales.forEach(s => {
-    const r = recRate(s), d = day(dayKey(s.date));
-    g.total += s.total; g.profit += s.profit; g.fxT += toFx(s.total, r); g.fxP += toFx(s.profit, r);
-    d.total += s.total; d.profit += s.profit; d.fxT += toFx(s.total, r); d.fxP += toFx(s.profit, r);
-    s.items.forEach(i => {
-      const cur = db.products.find(p => p.id === i.pid), k = i.pid || i.name;
-      const o = prods[k] || (prods[k] = {name: cur ? cur.name : i.name, qty:0, profit:0, fxP:0});
-      const pr = (i.price - i.cost) * i.qty;
-      o.qty += i.qty; o.profit += pr; o.fxP += toFx(pr, r);
-    });
-  });
-  tus.forEach(t => {
-    const r = recRate(t), d = day(dayKey(t.date));
-    u.total += t.price; u.profit += t.profit; u.fxT += toFx(t.price, r); u.fxP += toFx(t.profit, r);
-    d.total += t.price; d.profit += t.profit; d.fxT += toFx(t.price, r); d.fxP += toFx(t.profit, r);
-  });
-  const capital = db.products.reduce((a,p) => a + stockVal(p), 0);
-  $('#fxStats').innerHTML =
-    stat('صافي الربح الكلي', money2(g.fxP + u.fxP), 'g', `= ${money(g.profit + u.profit)}`) +
-    stat('ربح البضاعة', money2(g.fxP), 'g', `= ${money(g.profit)}`) +
-    stat('ربح الوحدات', money2(u.fxP), 'g', `= ${money(u.profit)}`) +
-    stat('إجمالي المبيعات', money2(g.fxT + u.fxT), '', `= ${money(g.total + u.total)}`) +
-    stat('سعر الصرف الحالي', `${num(rate)} ${C}`, 'v', `لكل 1 ${cur2()}`) +
-    stat('رأس المال بالمخزون', money2(toFx(capital, rate)), 'o', `= ${money(capital)} (بسعر اليوم)`);
-  const dl = Object.entries(days).sort((a,b) => b[0].localeCompare(a[0]));
-  $('#fxDays').innerHTML = dl.length ? dl.map(([k,d]) => `<tr><td>${DAYS[parseDay(k).getDay()]} ${fmtDate(parseDay(k))}</td>
-      <td>${num(d.total)}</td><td class="${pcls(d.profit)}">${num(d.profit)}</td><td class="muted">${d.fxT ? num(d.total / d.fxT) : '—'}</td>
-      <td>${money2(d.fxT)}</td><td class="${pcls(d.fxP)}"><b>${money2(d.fxP)}</b></td></tr>`).join('')
-    : '<tr><td colspan="6" class="empty">لا توجد مبيعات في هذه الفترة</td></tr>';
-  $('#fxDaysFoot').innerHTML = dl.length ? `<tr><td>المجموع</td><td>${num(g.total + u.total)}</td><td>${num(g.profit + u.profit)}</td><td></td><td>${money2(g.fxT + u.fxT)}</td><td>${money2(g.fxP + u.fxP)}</td></tr>` : '';
-  const pl = Object.values(prods).sort((a,b) => b.fxP - a.fxP);
-  $('#fxProds').innerHTML = pl.length ? pl.map(o => `<tr><td>${esc(o.name)}</td><td>${num(o.qty)}</td><td class="${pcls(o.profit)}">${money(o.profit)}</td><td class="${pcls(o.fxP)}"><b>${money2(o.fxP)}</b></td></tr>`).join('')
-    : '<tr><td colspan="4" class="empty">لا توجد مبيعات بضاعة في هذه الفترة</td></tr>';
-}
-function saveRate(){
-  const c2 = $('#fxCur').value.trim() || '$', rate = r4($('#fxRate').value);
-  if(!(rate > 0)) return alert('اكتب سعر الصرف');
-  if(c2 !== db.settings.cur2){ audit('settings', 'تغيير العملة الثانية', `من ${db.settings.cur2} إلى ${c2}`); db.settings.cur2 = c2; }
-  const old = currentRate();
-  if(rate !== old){
-    db.rates.push({id:uid(), date:new Date().toISOString(), rate});
-    audit('settings', 'تحديث سعر الصرف', `1 ${c2}: من ${old ? num(old) : '—'} إلى ${num(rate)} ${db.settings.currency}`);
-  }
-  save(); applyTitle(); $('#fxRate').blur(); renderFx(); toast('✔ تم حفظ سعر الصرف');
-}
-function deleteRate(id){
-  const r = db.rates.find(x => x.id === id);
-  if(!confirm(`حذف سعر الصرف ${num(r.rate)} المسجّل في ${fmtDateTime(r.date)}؟\n(الفواتير التي حُفظ معها سعرها لا تتأثر)`)) return;
-  db.rates = db.rates.filter(x => x.id !== id);
-  audit('settings', 'حذف سعر صرف', `${fmtDateTime(r.date)} — ${num(r.rate)}`);
-  save(); renderFx();
 }
 
 /* ===================== سجل العمليات ===================== */
@@ -2330,10 +1879,9 @@ function saveSettings(){
 }
 function applyTitle(){
   $('#shopTitle').textContent = '🏪 ' + db.settings.shopName; document.title = 'جرد — ' + db.settings.shopName;
-  $('#fxTabBtn').textContent = '💱 الأرباح بـ' + (db.settings.cur2 || '$');
 }
 function exportData(){
-  audit('system', 'حفظ نسخة احتياطية', `${db.products.length} منتج — ${db.sales.length} فاتورة — ${db.topups.length} عملية وحدات`);
+  audit('system', 'حفظ نسخة احتياطية', `${db.products.length} منتج — ${db.sales.length} فاتورة — ${db.purchases.length} فاتورة شراء`);
   save();
   saveFile('backup-' + dayKey(new Date()) + '.json', JSON.stringify(db), 'application/json');
 }
@@ -2344,7 +1892,7 @@ function importData(inp){
     try{
       const d = JSON.parse(rd.result);
       if(!d.products || !d.sales) throw 0;
-      if(!confirm(`النسخة تحتوي ${d.products.length} منتج و ${d.sales.length} فاتورة و ${(d.topups||[]).length} عملية وحدات.\nسيتم استبدال البيانات الحالية. متابعة؟`)) return;
+      if(!confirm(`النسخة تحتوي ${d.products.length} منتج و ${d.sales.length} فاتورة بيع و ${(d.purchases||[]).length} فاتورة شراء.\nسيتم استبدال البيانات الحالية. متابعة؟`)) return;
       db = normalize(d);
       audit('system', 'استرجاع نسخة احتياطية', `الملف: ${f.name}`);
       save(); applyTitle(); toast('تم الاسترجاع'); showTab('dash');
@@ -2354,15 +1902,15 @@ function importData(inp){
   rd.readAsText(f);
 }
 function wipeData(){
-  if(!confirm('سيتم مسح كل المنتجات والفواتير والوحدات نهائياً! هل حفظت نسخة احتياطية؟')) return;
+  if(!confirm('سيتم مسح كل المنتجات والفواتير والصندوق نهائياً! هل حفظت نسخة احتياطية؟')) return;
   if(prompt('للتأكيد اكتب: مسح') !== 'مسح') return;
-  const s = {p:db.products.length, i:db.sales.length, t:db.topups.length};
+  const s = {p:db.products.length, i:db.sales.length, t:db.purchases.length};
   db = defaultDB();
-  audit('system', 'مسح كل البيانات', `حُذف ${s.p} منتج و ${s.i} فاتورة و ${s.t} عملية وحدات`);
+  audit('system', 'مسح كل البيانات', `حُذف ${s.p} منتج و ${s.i} فاتورة بيع و ${s.t} فاتورة شراء`);
   save(); applyTitle(); showTab('dash'); toast('تم مسح البيانات');
 }
 function demoData(){
-  if(!confirm('إضافة منتجات وفواتير وعمليات وحدات تجريبية لتجربة البرنامج؟')) return;
+  if(!confirm('إضافة منتجات وفواتير تجريبية لتجربة البرنامج؟')) return;
   const items = [['مياه معدنية 1.5 لتر','6281000000011',0.35,0.5,120,'مشروبات'],['شيبس كبير','6281000000028',0.6,1,60,'سناكات'],['مشروب غازي علبة','6281000000035',0.4,0.75,96,'مشروبات'],
     ['شوكولاتة','6281000000042',0.5,1,50,'سناكات'],['بسكويت','6281000000059',0.9,1.25,30,'بسكوت'],['دخان علبة','6281000000066',12,14,40,'دخان'],
     ['معكرونة 500غ','6281000000073',0.7,1.1,40,'مواد غذائية'],['شاي 100 كيس','6281000000080',2.2,3.5,15,'مواد غذائية'],['سكر 1 كغ','6281000000097',0.8,1.2,2,'مواد غذائية'],['ويفر','6281000000103',0.3,0.5,0,'بسكوت']];
@@ -2383,11 +1931,6 @@ function demoData(){
                  recipe:[{pid:cup.id, qty:1}, {pid:bean.id, qty:16}, {pid:sugar.id, qty:10}]};
     db.products.push(cup, bean, sugar, esp, dbl); syncRecipes(); made.push(esp, esp, dbl);
   }
-  const provs = [['شركة أ',0.9,1.05,5000],['شركة ب',0.92,1.08,3000]].map(([name,unitCost,unitPrice,balance]) => {
-    let p = db.providers.find(x=>x.name===name);
-    if(!p){ p = {id:uid(),name,unitCost,unitPrice,balance,created:new Date().toISOString()}; db.providers.push(p); }
-    return p;
-  });
   const today = startOfDay(new Date());
   const rnd = n => Math.floor(Math.random()*n);
   for(let d = 29; d >= 0; d--){
@@ -2398,15 +1941,8 @@ function demoData(){
       const total = r2(its.reduce((a,i)=>a+i.price*i.qty,0)), cost = r2(its.reduce((a,i)=>a+i.cost*i.qty,0));
       db.sales.push({id:uid(), no:db.nextInvoice++, date:dt.toISOString(), items:its, total, cost, profit:r2(total-cost)});
     }
-    for(let k = 0, n = rnd(4); k < n; k++){
-      const dt = addDays(today, -d); dt.setHours(9 + rnd(12), rnd(60));
-      const p = provs[rnd(provs.length)], units = [10,25,50,100][rnd(4)];
-      const price = r2(units*p.unitPrice), cost = r2(units*p.unitCost);
-      db.topups.push({id:uid(), no:db.nextTopup++, date:dt.toISOString(), providerId:p.id, providerName:p.name, phone:'', note:'', units, price, cost, profit:r2(price-cost), unitCost:p.unitCost});
-    }
   }
   db.sales.sort((a,b)=>new Date(a.date)-new Date(b.date));
-  db.topups.sort((a,b)=>new Date(a.date)-new Date(b.date));
   if(!db.settings.cashStart){
     const d0 = addDays(today, -30).toISOString();
     db.settings.cashStart = d0;
