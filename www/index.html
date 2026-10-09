@@ -2007,11 +2007,15 @@ function setDmCur(c){
 }
 $('#dmCur').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if(b) setDmCur(b.dataset.c); });
 function dmCalc(){
-  const usdBox = dmMode === 'pay' && dmCurV === 'USD' && !!db.settings.cashStart && $('#dmFromBox').checked;
+  const fromBox = dmMode === 'pay' && !!db.settings.cashStart && $('#dmFromBox').checked, usdBox = fromBox && dmCurV === 'USD';
   $('#dmRateWrap').style.display = usdBox ? '' : 'none';
   const a = parseFloat($('#dmAmt').value) || 0, r = parseFloat($('#dmRate').value) || 0;
-  $('#dmCalcBox').style.display = usdBox && a > 0 && r > 0 ? '' : 'none';
-  if(usdBox && a > 0 && r > 0) $('#dmCalcBox').innerHTML = `يُخصم من الصندوق: <b>${money(a * r)}</b> (${num(a)} $ × ${num(r)})`;
+  const syp = usdBox ? (r > 0 ? a * r : 0) : a, bal = fromBox ? cashBalance() : 0, over = fromBox && syp > bal + 0.004;
+  $('#dmCalcBox').style.display = fromBox ? '' : 'none';
+  if(fromBox) $('#dmCalcBox').innerHTML = `رصيد الصندوق: <b>${money(bal)}</b>` +
+    (syp > 0 ? ` &nbsp;|&nbsp; يُخصم: <b>${money(syp)}</b>${usdBox ? ` (${num(a)} $ × ${num(r)})` : ''}` : '') +
+    (over ? `<br><b class="neg">⛔ المبلغ أكبر من رصيد الصندوق — لا يمكن التسديد منه</b>` : '');
+  $('#dmCalcBox').style.background = over ? 'var(--low)' : '';
 }
 function openDebtPay(i){
   dmMode = 'pay'; dmSupplier = dbNames[i];
@@ -2051,7 +2055,11 @@ function saveDebt(e){
       boxAmount = r2(amount * rate); setUsdRate(rate);
     }
     const fromBoxSyp = fromBox ? (boxAmount != null ? boxAmount : amount) : 0;
-    if(fromBox && fromBoxSyp > cashBalance() && !confirm(`المبلغ أكبر من رصيد الصندوق (${num(cashBalance())}). متابعة؟`)) return;
+    const bal = cashBalance();
+    if(fromBox && fromBoxSyp > bal + 0.004){ // ممنوع أن يصبح الصندوق بالسالب بسبب تسديد دين
+      alert(`لا يمكن التسديد من الصندوق — رصيده ${num(bal)} ل.س فقط، والمطلوب ${num(fromBoxSyp)} ل.س.\nسدّد مبلغاً أقل، أو اختر التسديد من خارج الصندوق.`);
+      return;
+    }
     db.debts.push({id:uid(), date:new Date().toISOString(), supplier, type:'pay', cur, amount, fromBox, note, ...(boxAmount != null ? {rate, boxAmount} : {})});
     audit('debt', `تسديد دين — ${supplier}: ${fmtCur(amount, cur)}`,
       `${fromBox ? 'من الصندوق' + (boxAmount != null ? ` (${num(boxAmount)} ل.س بسعر ${num(rate)})` : '') : 'من خارج الصندوق'} — المتبقي بعده ${fmtCur(left - amount, cur)}${note ? ' — ' + note : ''}`);
