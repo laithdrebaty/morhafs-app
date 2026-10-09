@@ -610,6 +610,7 @@
       <div class="row">
         <h2 style="margin:0">📒 ديون علينا (للموردين)</h2>
         <div class="spacer"></div>
+        <input id="dbSearch" placeholder="🔍 بحث باسم المورد" oninput="renderDebts()" style="width:190px">
         <label class="row" style="gap:6px;cursor:pointer"><input type="checkbox" id="dbAll" onchange="renderDebts()"> عرض المسدّد أيضاً</label>
         <button class="btn" onclick="openDebtOpen()">➕ دين سابق</button>
       </div>
@@ -631,6 +632,7 @@
       <div class="row">
         <h2 style="margin:0">📗 ديون لنا (على الزبائن)</h2>
         <div class="spacer"></div>
+        <input id="rvSearch" placeholder="🔍 بحث باسم الزبون" oninput="renderRecv()" style="width:190px">
         <label class="row" style="gap:6px;cursor:pointer"><input type="checkbox" id="rvAll" onchange="renderRecv()"> عرض المسدّد أيضاً</label>
         <button class="btn" onclick="openRecvOpen()">➕ دين سابق على زبون</button>
       </div>
@@ -2145,7 +2147,9 @@ function renderDebts(){
     stat('💵 ديون بالدولار', `<span class="neg">${num(t.USD)} $</span>`, 'r', t.USD && usdRate() ? `≈ ${money(t.USD * usdRate())}` : (t.USD ? 'حدّد سعر الصرف لتقييمها' : '')) +
     stat('إجمالي الديون بالليرة', money(totalDebt()), 'o', `لـ ${open.length} مورد${t.USD && usdRate() ? ' — الدولار بسعر ' + num(usdRate()) : ''}`) +
     stat('مسدّد هذا الشهر', debtText(paidM), 'g');
-  const list = $('#dbAll').checked ? L : open;
+  const q = $('#dbSearch').value.trim(), list = ($('#dbAll').checked || q ? L : open).filter(o => nameMatch(o.name, q));
+  if(q){ const ft = {SYP:0, USD:0}; list.forEach(o => { ft.SYP += Math.max(o.cur.SYP.left, 0); ft.USD += Math.max(o.cur.USD.left, 0); });
+    $('#dbStats').innerHTML += stat('🔍 نتيجة البحث', `<span class="neg">${debtText(ft)}</span>`, 'v', `${list.length} مورد`); }
   dbNames = list.map(o => o.name);
   $('#dbList').innerHTML = list.length ? list.map((o,i) => `<div class="cat" style="--c:${o.open.length ? '#d33f3f' : '#15935a'}">
       <div class="row"><span class="nm">${esc(o.name)}</span><div class="spacer"></div>${o.open.length ? '' : '<span class="chip" style="background:#e3f5ec;color:#0f7a4a">✔ مسدّد</span>'}</div>
@@ -2159,7 +2163,7 @@ function renderDebts(){
         ${o.open.length ? `<button class="btn-icon" onclick="openDebtPay(${i})">💵 تسديد</button>` : ''}
         <button class="btn-icon" onclick="viewDebt(${i})">📜 كشف حساب</button>
       </div></div>`).join('')
-    : '<div class="card muted">لا توجد ديون ✔ — عند إدخال بضاعة بالدين من صفحة المشتريات اختر «📒 دين على المحل» وستظهر هنا.</div>';
+    : (q ? `<div class="card muted">لا يوجد مورد باسم «${esc(q)}»</div>` : '<div class="card muted">لا توجد ديون ✔ — عند إدخال بضاعة بالدين من صفحة المشتريات اختر «📒 دين على المحل» وستظهر هنا.</div>');
 }
 let dmMode = 'pay', dmSupplier = '', dmCurV = 'SYP';
 function setDmCur(c){
@@ -2271,6 +2275,9 @@ function salePayAmounts(total){
 }
 const saleCashIn = x => x.pay === 'credit' ? (x.paid || 0) : x.total; // ما دخل الصندوق فعلياً من الفاتورة
 
+const normAr = t => String(t || '').toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
+const nameMatch = (name, q) => !q || normAr(name).includes(normAr(q));
+
 /* ===================== ديون لنا (على الزبائن) ===================== */
 function customerLedger(){
   const m = {}, get = n => m[n] || (m[n] = {name:n, credit:0, paid:0, rows:[]});
@@ -2292,7 +2299,8 @@ function renderRecv(){
   const now = new Date(), monthColl = inRange(db.recv.filter(x => x.type === 'pay'), startOfMonth(now), addDays(startOfDay(now), 1)).reduce((a,x) => a + x.amount, 0);
   $('#rvStats').innerHTML = stat('📗 إجمالي ديون لنا', `<span class="pos">${money(open.reduce((a,o) => a + o.left, 0))}</span>`, 'g', `على ${open.length} زبون`) +
     stat('محصّل هذا الشهر', money(monthColl), 'g') + (db.settings.cashStart ? stat('💰 رصيد الصندوق', money(cashBalance()), 'v') : '');
-  const list = $('#rvAll').checked ? L : open;
+  const q = $('#rvSearch').value.trim(), list = ($('#rvAll').checked || q ? L : open).filter(o => nameMatch(o.name, q));
+  if(q) $('#rvStats').innerHTML += stat('🔍 نتيجة البحث', `<span class="pos">${money(list.reduce((a,o) => a + Math.max(o.left, 0), 0))}</span>`, 'v', `${list.length} زبون`);
   rvNames = list.map(o => o.name);
   $('#rvList').innerHTML = list.length ? list.map((o,i) => `<div class="cat" style="--c:${o.left > 0.004 ? '#15935a' : '#8a93a6'}">
       <div class="row"><span class="nm">${esc(o.name)}</span><div class="spacer"></div>${o.left > 0.004 ? '' : '<span class="chip" style="background:#e3f5ec;color:#0f7a4a">✔ مسدّد</span>'}</div>
@@ -2306,7 +2314,7 @@ function renderRecv(){
         ${o.left > 0.004 ? `<button class="btn-icon" onclick="openRecvPay(${i})">💵 تحصيل</button>` : ''}
         <button class="btn-icon" onclick="viewRecv(${i})">📜 كشف حساب</button>
       </div></div>`).join('')
-    : '<div class="card muted">لا توجد ديون على الزبائن ✔ — عند البيع اختر «📗 آجل» واكتب اسم الزبون وستظهر هنا.</div>';
+    : (q ? `<div class="card muted">لا يوجد زبون باسم «${esc(q)}»</div>` : '<div class="card muted">لا توجد ديون على الزبائن ✔ — عند البيع اختر «📗 آجل» واكتب اسم الزبون وستظهر هنا.</div>');
 }
 let rmMode = 'pay', rmCustomer = '';
 function openRecvPay(i){
