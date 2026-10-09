@@ -147,7 +147,10 @@
   }
   /* ===== مبدّل التصميم ===== */
   .htop{display:flex;align-items:center;gap:10px}
-  .theme-wrap{position:relative;margin-inline-start:auto}
+  .hctl{display:flex;align-items:center;gap:8px;margin-inline-start:auto}
+  .theme-wrap{position:relative}
+  .user-sel{font:inherit;font-size:14px;background:transparent;color:var(--header-text);border:1px solid var(--nav-line);border-radius:var(--r-sm);padding:6px 8px;max-width:170px;cursor:pointer}
+  .user-sel option{color:#1d2433;background:#fff}
   .theme-btn{font:inherit;cursor:pointer;background:transparent;border:1px solid var(--nav-line);color:var(--header-text);border-radius:var(--r-sm);padding:6px 10px;font-size:16px;white-space:nowrap}
   .theme-menu{position:absolute;right:0;top:calc(100% + 8px);background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.25);padding:8px;z-index:40;display:none;width:250px}
   .theme-menu.show{display:block}
@@ -264,9 +267,12 @@
 <header>
   <div class="htop">
     <h1 id="shopTitle">🏪 جرد المحل</h1>
+    <div class="hctl">
+    <select id="userSel" class="user-sel" style="display:none" title="الشخص الحالي — كل الفواتير والعمليات تُسجّل باسمه" onchange="setCurrentUser(this.value)"></select>
     <div class="theme-wrap">
       <button class="theme-btn" id="themeBtn" title="تغيير التصميم" onclick="toggleThemeMenu(event)">🎨</button>
       <div class="theme-menu" id="themeMenu"></div>
+    </div>
     </div>
   </div>
   <nav id="nav">
@@ -642,13 +648,14 @@
         <div class="spacer"></div>
         <label class="muted small">من</label><input type="date" id="invFrom" onchange="renderInvoices()">
         <label class="muted small">إلى</label><input type="date" id="invTo" onchange="renderInvoices()">
+        <select id="invBy" onchange="renderInvoices()" style="display:none"></select>
         <button class="btn" onclick="invFrom.value='';invTo.value='';renderInvoices()">الكل</button>
       </div>
     </div>
     <div class="grid stats" id="invStats" style="margin-bottom:16px"></div>
     <div class="card tbl-wrap">
       <table>
-        <thead><tr><th>رقم</th><th>التاريخ</th><th>عدد القطع</th><th>الإجمالي</th><th>الربح</th><th>الدفع</th><th></th></tr></thead>
+        <thead><tr><th>رقم</th><th>التاريخ</th><th>الشخص</th><th>عدد القطع</th><th>الإجمالي</th><th>الربح</th><th>الدفع</th><th></th></tr></thead>
         <tbody id="invBody"></tbody>
       </table>
     </div>
@@ -712,6 +719,7 @@
       <div class="row">
         <h2 style="margin:0">سجل العمليات</h2>
         <div class="spacer"></div>
+        <select id="auBy" onchange="renderAudit(true)" style="display:none"></select>
         <select id="auArea" onchange="renderAudit(true)">
           <option value="">كل العمليات</option>
           <option value="coffee">☕ القهوة والمشروبات</option>
@@ -728,7 +736,7 @@
     </div>
     <div class="card tbl-wrap">
       <table>
-        <thead><tr><th>الوقت</th><th>القسم</th><th>العملية</th><th>التفاصيل</th></tr></thead>
+        <thead><tr><th>الوقت</th><th>الشخص</th><th>القسم</th><th>العملية</th><th>التفاصيل</th></tr></thead>
         <tbody id="auBody"></tbody>
       </table>
       <div id="auMore" style="text-align:center;margin-top:12px"></div>
@@ -743,6 +751,15 @@
       <label>العملة</label><input id="sCur" placeholder="ل.س">
       <label>تنبيه النفاد عندما تصبح الكمية أقل من أو تساوي</label><input id="sLow" type="number" min="0">
       <div style="margin-top:14px"><button class="btn p" onclick="saveSettings()">حفظ الإعدادات</button></div>
+    </div>
+    <div class="card" style="max-width:520px">
+      <h3>👥 الأشخاص (من يقوم بالحسابات)</h3>
+      <p class="muted small">اختياري: أضف أسماء من يعمل على البرنامج، ثم اختر الشخص الحالي من أعلى الشاشة 👤 — كل فاتورة وعملية تُسجّل باسمه.</p>
+      <div id="usersList"></div>
+      <div class="row" style="flex-wrap:nowrap;margin-top:10px">
+        <input id="newUser" placeholder="اسم الشخص، مثال: مرهف" style="flex:1;min-width:0">
+        <button class="btn p" onclick="addUser()">➕ إضافة</button>
+      </div>
     </div>
     <div class="card" style="max-width:520px">
       <h3>النسخ الاحتياطي</h3>
@@ -953,7 +970,7 @@ const PRINT_LBL = NATIVE ? '📤 مشاركة' : '🖨 طباعة';
 const KEY = 'mahal_inventory_v1';
 const DAYS = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 function defaultDB(){
-  return {products:[], tags:[], sales:[], providers:[], topups:[], charges:[], audit:[], rates:[], purchases:[], cash:[], debts:[], recv:[],
+  return {products:[], tags:[], sales:[], providers:[], topups:[], charges:[], audit:[], rates:[], purchases:[], cash:[], debts:[], recv:[], users:[],
           nextInvoice:1, nextTopup:1, nextPurchase:1, settings:{shopName:'محلي', currency:'ل.س', lowStock:3, curV2:1}};
 }
 function normalize(d){
@@ -976,7 +993,7 @@ function save(){
 const AUDIT_TYPES = {product:'منتجات', sale:'مبيعات', purchase:'مشتريات', cash:'صندوق', debt:'ديون علينا', recv:'ديون لنا', topup:'وحدات', balance:'رصيد', stock:'جرد', settings:'إعدادات', system:'نظام'};
 // area: coffee = القهوة والمشروبات، goods = باقي المنتجات، both = الاثنان، general = صندوق/ديون/إعدادات
 function audit(type, msg, details='', area){
-  db.audit.push({id:uid(), t:new Date().toISOString(), type, msg, details, area: area || 'general'});
+  db.audit.push({id:uid(), t:new Date().toISOString(), type, msg, details, area: area || 'general', ...byMe()});
   if(db.audit.length > 20000) db.audit.splice(0, db.audit.length - 20000);
 }
 
@@ -1086,6 +1103,64 @@ function renderThemeMenu(){
 function toggleThemeMenu(e){ if(e) e.stopPropagation(); renderThemeMenu(); $('#themeMenu').classList.toggle('show'); }
 document.addEventListener('click', e => { if(!e.target.closest('.theme-wrap')) $('#themeMenu').classList.remove('show'); });
 setTheme(currentTheme());
+
+/* ===================== الأشخاص والشخص الحالي ===================== */
+const curUser = () => db.users.find(u => u.id === db.settings.currentUser) || null;
+const byMe = () => { const u = curUser(); return u ? {by:u.name} : {}; };
+function renderUserSel(){
+  const sel = $('#userSel');
+  if(!db.users.length){ sel.style.display = 'none'; return; }
+  if(!curUser()) db.settings.currentUser = db.users[0].id;
+  sel.innerHTML = db.users.map(u => `<option value="${u.id}">👤 ${esc(u.name)}</option>`).join('');
+  sel.value = db.settings.currentUser; sel.style.display = '';
+}
+function setCurrentUser(id){
+  const u = db.users.find(x => x.id === id); if(!u) return;
+  db.settings.currentUser = id;
+  audit('settings', 'تبديل الشخص الحالي إلى ' + u.name);
+  save(); renderUserSel(); toast('👤 الحسابات الآن باسم: ' + u.name);
+  if(currentTab === 'settings') renderUsers();
+}
+function renderUsers(){
+  const cur = db.settings.currentUser;
+  $('#usersList').innerHTML = db.users.length ? db.users.map(u => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
+      <b>👤 ${esc(u.name)}</b>${u.id === cur ? ' <span class="chip" style="background:#e3f5ec;color:#0f7a4a">الحالي</span>' : ''}
+      <div class="spacer"></div>
+      ${u.id === cur ? '' : `<button class="btn-icon" onclick="setCurrentUser('${u.id}')">اختيار</button>`}
+      <button class="btn-icon" title="إعادة تسمية" onclick="renameUser('${u.id}')">✏️</button>
+      <button class="btn-icon danger" title="حذف" onclick="deleteUser('${u.id}')">🗑</button></div>`).join('')
+    : '<div class="muted small">لا يوجد أشخاص — البرنامج يعمل بدون تسجيل أسماء.</div>';
+}
+function addUser(){
+  const name = $('#newUser').value.trim(); if(!name) return;
+  if(db.users.some(u => u.name === name)) return alert('هذا الاسم موجود');
+  const u = {id:uid(), name}; db.users.push(u);
+  if(!curUser()) db.settings.currentUser = u.id;
+  audit('settings', 'إضافة شخص: ' + name);
+  $('#newUser').value = ''; save(); renderUsers(); renderUserSel(); toast('✔ أُضيف ' + name);
+}
+function renameUser(id){
+  const u = db.users.find(x => x.id === id), n = (prompt('الاسم الجديد:', u.name) || '').trim();
+  if(!n || n === u.name) return;
+  if(db.users.some(x => x.name === n)) return alert('هذا الاسم موجود');
+  audit('settings', 'إعادة تسمية شخص', `من ${u.name} إلى ${n}`);
+  u.name = n; save(); renderUsers(); renderUserSel();
+}
+function deleteUser(id){
+  const u = db.users.find(x => x.id === id);
+  if(!confirm(`حذف «${u.name}» من قائمة الأشخاص؟\n(الفواتير والعمليات القديمة تبقى باسمه)`)) return;
+  db.users = db.users.filter(x => x.id !== id);
+  if(db.settings.currentUser === id) db.settings.currentUser = db.users[0] ? db.users[0].id : undefined;
+  audit('settings', 'حذف شخص: ' + u.name);
+  save(); renderUsers(); renderUserSel();
+}
+// قائمة فلترة بالأشخاص (تظهر فقط إذا وُجدت أسماء في السجلات)
+function fillBySelect(sel, records){
+  const el = $(sel), v = el.value, names = [...new Set(records.map(r => r.by).filter(Boolean).concat(db.users.map(u => u.name)))];
+  el.style.display = names.length ? '' : 'none';
+  el.innerHTML = '<option value="">👤 كل الأشخاص</option>' + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  el.value = names.includes(v) ? v : '';
+}
 
 /* ===================== التبويبات ===================== */
 let currentTab = 'dash';
@@ -1216,7 +1291,7 @@ function checkout(){
   const total = r2(items.reduce((a,i)=>a+i.price*i.qty,0));
   const cost = r2(items.reduce((a,i)=>a+i.cost*i.qty,0));
   const sp = salePayAmounts(total);
-  const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), items, total, cost, profit:r2(total-cost),
+  const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), ...byMe(), items, total, cost, profit:r2(total-cost),
                 ...(slPay === 'credit' ? {pay:'credit', customer, paid:sp.paid, credit:sp.credit} : {})};
   items.forEach(i => applyStock(i.pid, i.qty, i.recipe, -1));
   db.sales.push(sale);
@@ -1939,7 +2014,7 @@ function savePurchase(){
     p.qty = r4(p.qty + i.qty); p.cost = i.cost; if(!p.material) p.price = i.price;
     if(ch) pushHistory(p);
   });
-  const pu = {id:uid(), no:db.nextPurchase++, date:new Date().toISOString(), supplier, note:$('#puNote').value.trim(), items, total,
+  const pu = {id:uid(), no:db.nextPurchase++, date:new Date().toISOString(), ...byMe(), supplier, note:$('#puNote').value.trim(), items, total,
               pay:puPay, boxPaid:pay.box, debt:pay.debt, fromBox:pay.box > 0,
               ...(usdDebt ? {debtCur:'USD', rate:r4(puRt), debtUsd:r2(pay.debt / puRt)} : {})};
   if(usdDebt) setUsdRate(r4(puRt));
@@ -2149,11 +2224,11 @@ function saveDebt(e){
       alert(`لا يمكن التسديد من الصندوق — رصيده ${num(bal)} ل.س فقط، والمطلوب ${num(fromBoxSyp)} ل.س.\nسدّد مبلغاً أقل، أو اختر التسديد من خارج الصندوق.`);
       return;
     }
-    db.debts.push({id:uid(), date:new Date().toISOString(), supplier, type:'pay', cur, amount, fromBox, note, ...(boxAmount != null ? {rate, boxAmount} : {})});
+    db.debts.push({id:uid(), date:new Date().toISOString(), ...byMe(), supplier, type:'pay', cur, amount, fromBox, note, ...(boxAmount != null ? {rate, boxAmount} : {})});
     audit('debt', `تسديد دين — ${supplier}: ${fmtCur(amount, cur)}`,
       `${fromBox ? 'من الصندوق' + (boxAmount != null ? ` (${num(boxAmount)} ل.س بسعر ${num(rate)})` : '') : 'من خارج الصندوق'} — المتبقي بعده ${fmtCur(left - amount, cur)}${note ? ' — ' + note : ''}`);
   } else {
-    db.debts.push({id:uid(), date:new Date().toISOString(), supplier, type:'open', cur, amount, note});
+    db.debts.push({id:uid(), date:new Date().toISOString(), ...byMe(), supplier, type:'open', cur, amount, note});
     audit('debt', `دين سابق — ${supplier}: ${fmtCur(amount, cur)}`, note);
   }
   save(); closeModal('debtModal'); renderDebts(); toast('✔ تم الحفظ');
@@ -2263,10 +2338,10 @@ function saveRecv(e){
     const o = customerLedger().find(x => x.name === customer), left = o ? o.left : 0;
     if(amount > left + 0.004 && !confirm(`المبلغ أكبر من المتبقي على الزبون (${num(left)}). متابعة؟`)) return;
     const toBox = !!db.settings.cashStart && $('#rmToBox').checked;
-    db.recv.push({id:uid(), date:new Date().toISOString(), customer, type:'pay', amount, toBox, note});
+    db.recv.push({id:uid(), date:new Date().toISOString(), ...byMe(), customer, type:'pay', amount, toBox, note});
     audit('recv', `تحصيل دين من ${customer}: ${num(amount)}`, `${toBox ? 'دخل الصندوق' : 'خارج الصندوق'} — المتبقي عليه ${num(left - amount)}${note ? ' — ' + note : ''}`);
   } else {
-    db.recv.push({id:uid(), date:new Date().toISOString(), customer, type:'open', amount, note});
+    db.recv.push({id:uid(), date:new Date().toISOString(), ...byMe(), customer, type:'open', amount, note});
     audit('recv', `دين سابق على ${customer}: ${num(amount)}`, note);
   }
   save(); closeModal('recvModal'); renderRecv(); toast('✔ تم الحفظ');
@@ -2300,14 +2375,14 @@ const CASH_LBL = {open:'رصيد افتتاحي', deposit:'إيداع', withdraw
 function cashMoves(){
   if(!db.settings.cashStart) return [];
   const st = new Date(db.settings.cashStart), after = d => new Date(d) >= st, mv = [];
-  db.sales.forEach(x => { const inBox = saleCashIn(x); if(inBox > 0 && after(x.date)) mv.push({date:x.date, kind:'sale', amount:inBox, text:`فاتورة بيع #${x.no}${x.credit ? ' (دفعة أولى من فاتورة آجلة — ' + x.customer + ')' : ''}`}); });
-  db.recv.forEach(x => x.type === 'pay' && x.toBox && after(x.date) && mv.push({date:x.date, kind:'collect', amount:x.amount, text:`تحصيل دين من ${x.customer}${x.note ? ' — ' + x.note : ''}`}));
+  db.sales.forEach(x => { const inBox = saleCashIn(x); if(inBox > 0 && after(x.date)) mv.push({date:x.date, kind:'sale', by:x.by, amount:inBox, text:`فاتورة بيع #${x.no}${x.credit ? ' (دفعة أولى من فاتورة آجلة — ' + x.customer + ')' : ''}`}); });
+  db.recv.forEach(x => x.type === 'pay' && x.toBox && after(x.date) && mv.push({date:x.date, kind:'collect', by:x.by, amount:x.amount, text:`تحصيل دين من ${x.customer}${x.note ? ' — ' + x.note : ''}`}));
   db.topups.forEach(x => after(x.date) && mv.push({date:x.date, kind:'topup', amount:x.price, text:`وحدات #${x.no} — ${x.providerName}`}));
-  db.purchases.forEach(x => boxPaidOf(x) > 0 && after(x.date) && mv.push({date:x.date, kind:'purchase', amount:-boxPaidOf(x), text:`مشتريات #${x.no} — ثمن ${purchaseLabel(x)}${x.supplier ? ' (' + x.supplier + ')' : ''}${debtOf(x) ? ' — دفعة أولى والباقي دين' : ''}`}));
-  db.debts.forEach(x => x.type === 'pay' && x.fromBox && after(x.date) && mv.push({date:x.date, kind:'debtpay', amount:-(x.boxAmount != null ? x.boxAmount : x.amount),
+  db.purchases.forEach(x => boxPaidOf(x) > 0 && after(x.date) && mv.push({date:x.date, kind:'purchase', by:x.by, amount:-boxPaidOf(x), text:`مشتريات #${x.no} — ثمن ${purchaseLabel(x)}${x.supplier ? ' (' + x.supplier + ')' : ''}${debtOf(x) ? ' — دفعة أولى والباقي دين' : ''}`}));
+  db.debts.forEach(x => x.type === 'pay' && x.fromBox && after(x.date) && mv.push({date:x.date, kind:'debtpay', by:x.by, amount:-(x.boxAmount != null ? x.boxAmount : x.amount),
     text:`تسديد دين — ${x.supplier}${x.cur === 'USD' ? ` (${num(x.amount)} $ بسعر ${num(x.rate)})` : ''}${x.note ? ' — ' + x.note : ''}`}));
   db.charges.forEach(x => x.fromBox !== false && after(x.date) && mv.push({date:x.date, kind:'charge', amount:-x.paid, text:`شحن رصيد ${x.providerName} (${num(x.units)} وحدة)`}));
-  db.cash.forEach(x => after(x.date) && mv.push({date:x.date, kind:x.type, amount:x.amount, id:x.id, text:(CASH_LBL[x.type] || '') + (x.note ? ' — ' + x.note : '')}));
+  db.cash.forEach(x => after(x.date) && mv.push({date:x.date, kind:x.type, by:x.by, amount:x.amount, id:x.id, text:(CASH_LBL[x.type] || '') + (x.note ? ' — ' + x.note : '')}));
   return mv.sort((a,b) => new Date(a.date) - new Date(b.date));
 }
 function cashBalance(){ return cashMoves().reduce((a,m) => a + m.amount, 0); }
@@ -2362,7 +2437,10 @@ function renderBox(){
     stat('مصاريف وسحوبات', money(d.exp), 'r') +
     (d.dep ? stat('إيداعات', money(d.dep)) : '') +
     stat('رصيد أول اليوم', money(d.before)) +
-    stat('رصيد آخر اليوم', money(d.after), 'v');
+    stat('رصيد آخر اليوم', money(d.after), 'v') + (() => {  // مبيعات كل شخص في هذا اليوم
+      const by = {}; salesBetween(d.from, d.to).forEach(x => { if(!x.by) return; const o = by[x.by] || (by[x.by] = {total:0, profit:0, count:0}); o.total += x.total; o.profit += x.profit; o.count++; });
+      return Object.entries(by).map(([n, o]) => stat('👤 ' + esc(n), money(o.total), '', `${o.count} فاتورة — ربح ${num(o.profit)}`)).join('');
+    })();
   // تجميع مبيعات كل يوم في سطر واحد (اختياري)
   let rows = mv;
   if($('#boxGroup').checked){
@@ -2380,7 +2458,7 @@ function renderBox(){
   const from = $('#boxFrom').value, to = $('#boxTo').value, kind = $('#boxKind').value;
   rows = rows.filter(m => (!from || dayKey(m.date) >= from) && (!to || dayKey(m.date) <= to) && (!kind || (kind === 'in' ? m.amount >= 0 : m.amount < 0))).reverse();
   $('#boxBody').innerHTML = rows.length ? rows.slice(0, boxLimit).map(m => `<tr>
-      <td class="small" style="white-space:nowrap">${fmtDateTime(m.date)}</td><td>${esc(m.text)}</td>
+      <td class="small" style="white-space:nowrap">${fmtDateTime(m.date)}</td><td>${esc(m.text)}${m.by && !m.count ? `<div class="muted small">👤 ${esc(m.by)}</div>` : ''}</td>
       <td class="money-in">${m.amount >= 0 ? num(m.amount) : ''}</td><td class="money-out">${m.amount < 0 ? num(-m.amount) : ''}</td>
       <td><b class="${m.bal < 0 ? 'neg' : ''}">${num(m.bal)}</b></td>
       <td>${m.id && m.kind !== 'open' ? `<button class="btn-icon danger" onclick="deleteCash('${m.id}')">🗑</button>` : ''}</td></tr>`).join('')
@@ -2392,7 +2470,7 @@ function startBox(){
   if(!(amt >= 0) || $('#boxOpenAmt').value === '') return alert('اكتب المبلغ الموجود في الصندوق الآن (0 إذا كان فارغاً)');
   const now = new Date().toISOString();
   db.settings.cashStart = now;
-  db.cash.push({id:uid(), date:now, type:'open', amount:amt});
+  db.cash.push({id:uid(), date:now, type:'open', amount:amt, ...byMe()});
   audit('cash', 'بدء الصندوق', `الرصيد الافتتاحي ${num(amt)}`);
   save(); $('#boxOpenAmt').value = ''; renderBox(); toast('✔ بدأ الصندوق');
 }
@@ -2416,7 +2494,7 @@ function saveCash(e){
   if(!(amt > 0)) return alert('اكتب المبلغ');
   const signed = cmKind === 'deposit' ? amt : -amt;
   if(signed < 0 && amt > cashBalance() && !confirm(`المبلغ أكبر من رصيد الصندوق (${num(cashBalance())}). متابعة؟`)) return;
-  db.cash.push({id:uid(), date:new Date().toISOString(), type:cmKind, amount:signed, note});
+  db.cash.push({id:uid(), date:new Date().toISOString(), ...byMe(), type:cmKind, amount:signed, note});
   audit('cash', `${CASH_LBL[cmKind]}: ${num(amt)}`, note || '');
   save(); closeModal('cashModal'); renderBox(); toast('✔ تم الحفظ');
 }
@@ -2439,7 +2517,7 @@ function bcCalc(){
 function saveBoxCount(e){
   e.preventDefault();
   const actual = r2($('#bcAmt').value), bal = r2(cashBalance()), d = r2(actual - bal);
-  if(d !== 0) db.cash.push({id:uid(), date:new Date().toISOString(), type:'adjust', amount:d, note:`المتوقع ${num(bal)} — الفعلي ${num(actual)}`});
+  if(d !== 0) db.cash.push({id:uid(), date:new Date().toISOString(), ...byMe(), type:'adjust', amount:d, note:`المتوقع ${num(bal)} — الفعلي ${num(actual)}`});
   audit('cash', 'جرد الصندوق', `المتوقع ${num(bal)} — الفعلي ${num(actual)} — الفرق ${num(d)}`);
   save(); closeModal('countModal'); renderBox(); toast(d === 0 ? '✔ الصندوق مطابق' : 'تم تسجيل الفرق كتسوية');
 }
@@ -2461,21 +2539,23 @@ function printBoxDay(){
 
 /* ===================== الفواتير ===================== */
 function renderInvoices(){
-  const list = byDayFilter(db.sales, $('#invFrom').value, $('#invTo').value).slice().reverse();
+  fillBySelect('#invBy', db.sales);
+  const byF = $('#invBy').value;
+  const list = byDayFilter(db.sales, $('#invFrom').value, $('#invTo').value).filter(s => !byF || (s.by || '') === byF).slice().reverse();
   const t = sumSales(list);
   $('#invStats').innerHTML = stat('عدد الفواتير', t.count) + stat('عدد القطع', num(t.items)) + stat('المبيعات', money(t.total)) + stat('رأس المال', money(t.cost), 'o') + stat('الربح', money(t.profit), 'g');
   $('#invBody').innerHTML = list.length ? list.slice(0, 500).map(s => `<tr>
-      <td><b>#${s.no}</b></td><td>${fmtDateTime(s.date)}</td>
+      <td><b>#${s.no}</b></td><td>${fmtDateTime(s.date)}</td><td class="small">${esc(s.by || '—')}</td>
       <td>${num(s.items.reduce((a,i)=>a+i.qty,0))}</td><td>${money(s.total)}</td>
       <td class="${pcls(s.profit)}">${money(s.profit)}</td>
       <td class="small">${s.credit ? `📗 آجل — ${esc(s.customer)}<div class="neg">${money(s.credit)}</div>` : '💰 نقداً'}</td>
       <td style="white-space:nowrap"><button class="btn-icon" onclick="viewInvoice('${s.id}')">👁 عرض</button>
       <button class="btn-icon danger" onclick="deleteInvoice('${s.id}')">🗑</button></td></tr>`).join('')
-    : '<tr><td colspan="7" class="empty">لا توجد فواتير</td></tr>';
+    : '<tr><td colspan="8" class="empty">لا توجد فواتير</td></tr>';
 }
 function invoiceHTML(s, forPrint){
   return `<div style="text-align:center"><h2 style="margin:0 0 4px">${esc(db.settings.shopName)}</h2>
-    <div class="muted">فاتورة رقم #${s.no} — ${fmtDateTime(s.date)}${s.customer ? ' — الزبون: ' + esc(s.customer) : ''}</div></div>
+    <div class="muted">فاتورة رقم #${s.no} — ${fmtDateTime(s.date)}${s.customer ? ' — الزبون: ' + esc(s.customer) : ''}${s.by ? ' — البائع: ' + esc(s.by) : ''}</div></div>
     <div class="tbl-wrap"><table style="margin-top:14px"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>المجموع</th>${forPrint ? '' : '<th>الربح</th>'}</tr></thead>
     <tbody>${s.items.map(i => `<tr><td>${esc(i.name)}</td><td>${num(i.qty)}</td><td>${money(i.price)}</td><td>${money(i.price*i.qty)}</td>
       ${forPrint ? '' : `<td class="${pcls(i.price-i.cost)}">${money((i.price-i.cost)*i.qty)}</td>`}</tr>`).join('')}</tbody>
@@ -2608,28 +2688,30 @@ const areaMatch = (a, ar) => !ar || auditArea(a) === ar || (auditArea(a) === 'bo
 const AREA_ICON = {coffee:'☕ ', both:'☕📦 ', goods:'', general:''};
 function goAudit(area){ $('#auArea').value = area; ['#auType','#auFrom','#auTo','#auSearch'].forEach(x => $(x).value = ''); showTab('audit'); }
 function auditFiltered(){
-  const type = $('#auType').value, from = $('#auFrom').value, to = $('#auTo').value, q = $('#auSearch').value.trim().toLowerCase(), ar = $('#auArea').value;
-  return db.audit.filter(a => (!type || a.type === type) && areaMatch(a, ar) && (!from || dayKey(a.t) >= from) && (!to || dayKey(a.t) <= to)
+  const type = $('#auType').value, from = $('#auFrom').value, to = $('#auTo').value, q = $('#auSearch').value.trim().toLowerCase(), ar = $('#auArea').value, byF = $('#auBy').value;
+  return db.audit.filter(a => (!type || a.type === type) && areaMatch(a, ar) && (!byF || (a.by || '') === byF) && (!from || dayKey(a.t) >= from) && (!to || dayKey(a.t) <= to)
     && (!q || (a.msg + ' ' + a.details).toLowerCase().includes(q))).reverse();
 }
 function renderAudit(reset){
   if(reset) auLimit = 300;
+  fillBySelect('#auBy', db.audit);
   const list = auditFiltered();
   $('#auBody').innerHTML = list.length ? list.slice(0, auLimit).map(a => `<tr>
       <td class="small" style="white-space:nowrap">${fmtDateTime(a.t)}</td>
+      <td class="small">${esc(a.by || '—')}</td>
       <td><span class="tag ${a.type}">${AUDIT_TYPES[a.type] || a.type}</span></td>
       <td><b>${AREA_ICON[auditArea(a)] || ''}${esc(a.msg)}</b></td><td class="small muted">${esc(a.details)}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="empty">لا توجد عمليات مسجلة</td></tr>';
+    : '<tr><td colspan="5" class="empty">لا توجد عمليات مسجلة</td></tr>';
   $('#auMore').innerHTML = list.length > auLimit ? `<button class="btn" onclick="auLimit+=300;renderAudit()">عرض المزيد (${list.length - auLimit} متبقية)</button>` : `<span class="muted small">${list.length} عملية</span>`;
 }
 function exportAudit(){
   const csvCell = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
-  const rows = [['الوقت','القسم','العملية','التفاصيل'], ...auditFiltered().map(a => [fmtDateTime(a.t), AUDIT_TYPES[a.type] || a.type, a.msg, a.details])];
+  const rows = [['الوقت','الشخص','القسم','العملية','التفاصيل'], ...auditFiltered().map(a => [fmtDateTime(a.t), a.by || '', AUDIT_TYPES[a.type] || a.type, a.msg, a.details])];
   saveFile('audit-' + dayKey(new Date()) + '.csv', '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv');
 }
 
 /* ===================== الإعدادات ===================== */
-function renderSettings(){ $('#sName').value = db.settings.shopName; $('#sCur').value = db.settings.currency; $('#sLow').value = db.settings.lowStock; }
+function renderSettings(){ $('#sName').value = db.settings.shopName; $('#sCur').value = db.settings.currency; $('#sLow').value = db.settings.lowStock; renderUsers(); }
 function saveSettings(){
   const nw = {shopName:$('#sName').value.trim() || 'محلي', currency:$('#sCur').value.trim(), lowStock:parseFloat($('#sLow').value) || 0};
   const names = {shopName:'اسم المحل', currency:'العملة', lowStock:'حد النفاد'};
@@ -2640,6 +2722,7 @@ function saveSettings(){
 }
 function applyTitle(){
   $('#shopTitle').textContent = '🏪 ' + db.settings.shopName; document.title = 'جرد — ' + db.settings.shopName;
+  renderUserSel(); // بعد الاسترجاع أو المسح
 }
 function exportData(){
   audit('system', 'حفظ نسخة احتياطية', `${db.products.length} منتج — ${db.sales.length} فاتورة — ${db.purchases.length} فاتورة شراء`);
@@ -2748,6 +2831,7 @@ syncRecipes();
 applyTitle();
 setPuPay('box');
 setSlPay('cash');
+renderUserSel();
 showTab('dash');
 </script>
 </body>
