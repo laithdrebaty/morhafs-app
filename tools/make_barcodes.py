@@ -24,6 +24,7 @@ ITEMS = [
     ('كمون و ليمون',      'mug',       'M', '#d9a92b', 'lemon'),
     ('بابونج',            'mug',       'M', '#e2b93b', 'daisy'),
     ('شاي أخضر',          'glass',     'M', '#a9b83a', 'leaf'),
+    ('اسبريسو قزاز',      'shot',      'S', '#4a2412', 'crema'),
 ]
 SIZE_NAME = {'S': 'صغير', 'M': 'وسط', 'L': 'كبير'}
 CUP_NAME = {'S': 'كاسة صغيرة', 'M': 'كاسة وسط', 'L': 'كاسة كبيرة'}
@@ -47,7 +48,7 @@ def ean13_bits(code):
     right = ''.join(R[x] for x in d[7:])
     return '101' + left + '01010' + right + '101'
 
-def barcode_svg(code, mod=0.33, h=13.5):
+def barcode_svg(code, mod=0.33, h=12.5):
     """باركود بالعرض القياسي (خط 0.33 مم) مع هوامش صامتة."""
     bits, qz_l, qz_r = ean13_bits(code), 11, 7
     guard = set(range(0, 3)) | set(range(45, 50)) | set(range(92, 95))
@@ -165,6 +166,19 @@ def cup_svg(style, size, liquid, top):
             f'<ellipse cx="50" cy="46.8" rx="34" ry="6" fill="#8c5a2b"/>',
             f'<ellipse cx="50" cy="46.8" rx="30" ry="5" fill="{liquid}"/>',
             topping(top, 50, 46.8, 30, 5), steam(50, 34)]
+    elif style == 'shot':  # كاسة اسبريسو قزاز شفافة (بلا كاسة كرتون) — تظهر القهوة والكريما من خلال الزجاج
+        parts += [
+            f'<ellipse cx="50" cy="98" rx="34" ry="6.5" fill="#ffffff" stroke="{INK}" stroke-width="2"/>',
+            f'<path d="M73 56 q14 1 12 13 q-2 10 -14 10" fill="none" stroke="#b9d6e6" stroke-width="5" stroke-linecap="round"/>',
+            f'<path d="M73 56 q14 1 12 13 q-2 10 -14 10" fill="none" stroke="{INK}" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>',
+            f'<path d="M26 44 L74 44 L70 93 Q50 97 30 93 Z" fill="#eaf5fb" stroke="{INK}" stroke-width="2.2" stroke-linejoin="round" opacity=".95"/>',
+            f'<path d="M28.6 62 L71.4 62 L69.6 91.5 Q50 95.5 30.4 91.5 Z" fill="{liquid}"/>',
+            f'<path d="M28.6 62 L71.4 62 L71 67 L29 67 Z" fill="#c98a45"/>',
+            '<path d="M34 50 L36 88" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".85"/>',
+            '<path d="M64 52 L63 60" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity=".7"/>',
+            f'<ellipse cx="50" cy="44" rx="24" ry="5" fill="#f4fafd" stroke="{INK}" stroke-width="2.2"/>',
+            f'<ellipse cx="50" cy="62" rx="21.4" ry="3.6" fill="#c98a45"/>',
+            topping(top, 50, 62, 21.4, 3.6), steam(50, 32, 2, 10)]
     elif style == 'glass':  # استكانة شاي
         parts += [
             f'<ellipse cx="50" cy="98" rx="30" ry="6" fill="#ffffff" stroke="{INK}" stroke-width="2"/>',
@@ -195,16 +209,16 @@ page = f'''<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <style>
   @page {{ size: A4; margin: 8mm; }}
   body {{ margin: 0; font-family: Tahoma, "Segoe UI", Arial, sans-serif; color: #2b2b2b; }}
-  h1 {{ font-size: 16pt; text-align: center; margin: 0 0 1mm; color: #4a3426; }}
-  .sub {{ text-align: center; font-size: 8.5pt; color: #777; margin-bottom: 3mm; }}
-  .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 2.6mm; }}
+  h1 {{ font-size: 15pt; text-align: center; margin: 0 0 0.5mm; color: #4a3426; }}
+  .sub {{ text-align: center; font-size: 8pt; color: #777; margin-bottom: 2.5mm; }}
+  .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 2.2mm; }}
   .lbl {{ display: flex; align-items: center; gap: 3mm; border: 0.3mm dashed #b8a99a; border-radius: 3mm;
-          padding: 1.6mm 3mm; break-inside: avoid; background: #fffdf9; }}
-  .cup {{ width: 27mm; height: 27mm; flex: none; display: flex; align-items: flex-end; justify-content: center; }}
-  .cup .art {{ width: 27mm; height: 27mm; }}
+          padding: 1.2mm 3mm; break-inside: avoid; background: #fffdf9; }}
+  .cup {{ width: 25mm; height: 25mm; flex: none; display: flex; align-items: flex-end; justify-content: center; }}
+  .cup .art {{ width: 25mm; height: 25mm; }}
   .info {{ flex: 1; display: flex; flex-direction: column; align-items: center; }}
-  .nm {{ font-size: 12.5pt; font-weight: bold; color: #3a2a1e; }}
-  .sz {{ font-size: 8pt; font-weight: bold; border-radius: 10mm; padding: 0.4mm 3mm; margin: 0.6mm 0 1mm; }}
+  .nm {{ font-size: 12pt; font-weight: bold; color: #3a2a1e; }}
+  .sz {{ font-size: 8pt; font-weight: bold; border-radius: 10mm; padding: 0.4mm 3mm; margin: 0.4mm 0 0.8mm; }}
   .bc {{ display: block; }}
   .list {{ break-before: page; }}
   table {{ width: 100%; border-collapse: collapse; font-size: 11pt; }}
