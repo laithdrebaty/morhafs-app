@@ -127,6 +127,7 @@
   #reader .guide::after{content:"";position:absolute;left:4%;right:4%;top:50%;height:2px;background:#ff4545;box-shadow:0 0 8px #ff4545}
   #reader .guide.hit{border-color:#2ee07a}
   #scanTip{font-size:12px;line-height:1.6}
+  .scan-confirm{margin-top:10px;border:2px solid var(--green);background:var(--profit-bg);border-radius:var(--radius);padding:12px;text-align:center}
   .toast{position:fixed;bottom:calc(20px + var(--sab));left:50%;transform:translateX(-50%);background:var(--toast);color:#fff;padding:11px 20px;border-radius:10px;z-index:100;opacity:0;transition:.25s;pointer-events:none;max-width:90vw}
   .toast.show{opacity:1}
   .tabs2{display:flex;gap:6px;flex-wrap:wrap}
@@ -912,6 +913,14 @@
       <button class="btn" id="torchBtn" style="display:none" onclick="toggleTorch()">🔦</button>
     </div>
     <div id="reader" style="margin-top:10px"><video id="scanVideo" playsinline muted autoplay></video><div class="guide" id="scanGuide"></div></div>
+    <div id="scanConfirm" class="scan-confirm" style="display:none">
+      <div id="scDetail"></div>
+      <div class="row" style="margin-top:10px;flex-wrap:nowrap">
+        <button class="btn g big" style="flex:1" onclick="scanAccept()">✔ إضافة</button>
+        <button class="btn big" style="flex:1" onclick="scanReject()">✕ تجاهل</button>
+      </div>
+    </div>
+    <label class="row small muted" style="margin-top:8px;gap:6px;cursor:pointer;flex-wrap:nowrap"><input type="checkbox" id="scanAsk" onchange="setScanAsk(this.checked)"> تأكيد قبل الإضافة (يتوقف المسح ويسألك عند كل باركود)</label>
     <div id="scanLast" class="muted" style="margin-top:10px;min-height:22px"></div>
     <div id="scanTip" class="note">💡 ضع الباركود <b>أفقياً داخل الإطار</b> على بعد <b>15–25 سم</b> تقريباً، بإضاءة جيدة، وثبّته لثانية. كاميرا اللابتوب ضعيفة التركيز: إذا لم يُقرأ، أبعده قليلاً ثم قرّبه ببطء.</div>
     <div class="row" style="margin-top:8px;flex-wrap:nowrap">
@@ -1288,6 +1297,7 @@ async function openScanner(cb, continuous){
   const det = await getDetector();
   if(!det){ alert('محرك قراءة الباركود غير متوفر (الملف scanner-engine.js مفقود).\nاستخدم قارئ USB أو اكتب الرقم يدوياً.'); return; }
   scanCb = cb; scanContinuous = continuous; lastCode = '';
+  hideScanConfirm(); $('#scanAsk').checked = scanAskOn();
   $('#scanLast').textContent = continuous ? 'المسح المتواصل: امسح القطع واحدة تلو الأخرى (لقطعتين متشابهتين أبعد الباركود ثم أعده)، ثم اضغط إغلاق.' : 'جاري البحث عن باركود...';
   $('#scanManual').value = '';
   openModal('scanModal');
@@ -1337,7 +1347,7 @@ function stopStream(){
 async function scanLoop(s, gen){
   if(scanner !== s || s.gen !== gen || !s.stream) return;
   const v = $('#scanVideo');
-  if(v.readyState >= 2 && v.videoWidth){
+  if(v.readyState >= 2 && v.videoWidth && scanPending == null){ // أثناء انتظار التأكيد لا نقرأ شيئاً
     // نقرأ منطقة الإطار فقط وبالدقة الكاملة للكاميرا — أسرع وأدق
     const vw = v.videoWidth, vh = v.videoHeight, cw = Math.round(vw * 0.84), ch = Math.round(vh * 0.5);
     scanCanvas.width = cw; scanCanvas.height = ch;
@@ -1355,18 +1365,41 @@ async function scanLoop(s, gen){
   if(scanner === s && s.gen === gen && s.stream) s.timer = setTimeout(() => scanLoop(s, gen), 60);
 }
 function flashGuide(){ const g = $('#scanGuide'); g.classList.add('hit'); clearTimeout(g._t); g._t = setTimeout(() => g.classList.remove('hit'), 400); }
-function onScan(text){
+// تأكيد قبل الإضافة: الكاميرا تقرأ مباشرة، فنوقف المسح ونعرض ما قُرئ حتى يضغط المستخدم «إضافة» أو «تجاهل»
+let scanPending = null;
+function scanAskOn(){ try{ return localStorage.getItem('mahal_scan_ask') !== '0'; }catch(e){ return true; } }
+function setScanAsk(on){ try{ localStorage.setItem('mahal_scan_ask', on ? '1' : '0'); }catch(e){} }
+function onScan(text, manual){
+  if(scanPending != null) return;
   const now = Date.now();
   // نفس القطعة ما دامت أمام الكاميرا لا تُضاف مرة ثانية — أبعدها ثانية ثم أعدها لإضافة قطعة أخرى
-  if(text === lastCode && now - lastTime < 1200){ lastTime = now; return; }
+  if(!manual && text === lastCode && now - lastTime < 1200){ lastTime = now; return; }
   lastCode = text; lastTime = now;
+  if(!manual && scanAskOn()) return showScanConfirm(text);
+  acceptScan(text);
+}
+function acceptScan(text){
   const cb = scanCb;
   if(!scanContinuous){ beep(true); closeScanner(); }
   cb && cb(text);
 }
-function manualScan(){ const v = $('#scanManual').value.trim(); if(v){ $('#scanManual').value = ''; onScan(v); } }
+function showScanConfirm(text){
+  scanPending = text; beep(true);
+  const p = db.products.find(x => x.barcode && x.barcode === text);
+  $('#scDetail').innerHTML = p
+    ? `<div style="font-size:19px"><b>${esc(p.name)}</b></div><div class="muted">${p.material ? '🧱 مادة للآلة' : money(p.price)} — <span dir="ltr">${esc(text)}</span></div>`
+    : `<div style="font-size:16px"><b>${scanContinuous ? '⚠️ باركود غير مسجّل' : 'الباركود المقروء'}</b></div><div class="muted" dir="ltr" style="font-size:16px">${esc(text)}</div>`;
+  $('#scanConfirm').style.display = '';
+  $('#scanConfirm').scrollIntoView({block:'nearest'});
+}
+function hideScanConfirm(){ scanPending = null; $('#scanConfirm').style.display = 'none'; }
+function scanAccept(){ const t = scanPending; if(t == null) return; hideScanConfirm(); lastCode = t; lastTime = Date.now(); acceptScan(t); }
+// التجاهل: لا يسأل مجدداً عن نفس الباركود ما دام أمام الكاميرا
+function scanReject(){ const t = scanPending; hideScanConfirm(); lastCode = t; lastTime = Date.now() + 1500; $('#scanLast').innerHTML = '✕ تم التجاهل — وجّه الكاميرا نحو الباركود الصحيح'; }
+function manualScan(){ const v = $('#scanManual').value.trim(); if(v){ $('#scanManual').value = ''; onScan(v, true); } }
 $('#scanManual').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); manualScan(); } });
 async function closeScanner(){
+  hideScanConfirm();
   closeModal('scanModal');
   stopStream(); scanner = null;
   if(currentTab === 'sale') focusIfDesktop(saleInput);
@@ -2686,12 +2719,14 @@ function demoData(){
 
 /* ===================== اختصارات وزر الرجوع ===================== */
 function closeTopLayer(){
+  if(scanPending != null){ scanReject(); return true; }
   if(scanner){ closeScanner(); return true; }
   const open = [...document.querySelectorAll('.modal.show')];
   if(open.length){ open.forEach(m => closeModal(m.id)); return true; }
   return false;
 }
 document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && scanPending != null && document.activeElement !== $('#scanManual')){ e.preventDefault(); scanAccept(); return; }
   if(e.key === 'F2'){ e.preventDefault(); if(currentTab !== 'sale') showTab('sale'); openScanner(handleCode, true); }
   if(e.key === 'Escape') closeTopLayer();
 });
