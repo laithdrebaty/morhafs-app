@@ -23,6 +23,7 @@ ITEMS = [
     ('زهورات',            'mug',       'M', '#b8324a', 'flower'),
     ('كمون و ليمون',      'mug',       'M', '#d9a92b', 'lemon'),
     ('بابونج',            'mug',       'M', '#e2b93b', 'daisy'),
+    ('شاي أخضر',          'glass',     'M', '#a9b83a', 'leaf'),
 ]
 SIZE_NAME = {'S': 'صغير', 'M': 'وسط', 'L': 'كبير'}
 CUP_NAME = {'S': 'كاسة صغيرة', 'M': 'كاسة وسط', 'L': 'كاسة كبيرة'}
@@ -103,6 +104,10 @@ def topping(kind, cx, cy, rx, ry):
         fx, fy = cx - rx * .2, cy
         petals = ''.join(f'<ellipse cx="{fx}" cy="{fy - 2.6}" rx="1.7" ry="2.8" fill="#f28fb0" transform="rotate({a} {fx} {fy})"/>' for a in range(0, 360, 72))
         return petals + f'<circle cx="{fx}" cy="{fy}" r="1.4" fill="#ffd34d"/>'
+    if kind == 'leaf':  # ورقة شاي أخضر
+        lx, ly = cx + rx * .15, cy
+        return (f'<path d="M{lx-6} {ly+.6} Q{lx-1} {ly-5.5} {lx+6} {ly-.6} Q{lx+1} {ly+5} {lx-6} {ly+.6} Z" fill="#4c9a2a" stroke="#2f6b18" stroke-width=".6"/>'
+                f'<path d="M{lx-5} {ly+.5} L{lx+5} {ly-.5}" stroke="#a8d97a" stroke-width=".7"/>')
     if kind == 'daisy':  # زهرة بابونج
         fx, fy = cx + rx * .15, cy
         petals = ''.join(f'<ellipse cx="{fx}" cy="{fy - 3}" rx="1.1" ry="2.6" fill="#ffffff" stroke="#e8e2c8" stroke-width=".3" transform="rotate({a} {fx} {fy})"/>' for a in range(0, 360, 36))
@@ -167,7 +172,7 @@ def cup_svg(style, size, liquid, top):
             f'<path d="M31.5 44 Q40 64 34 91 Q50 95.5 66 91 Q60 64 68.5 44 Z" fill="{liquid}" opacity=".9"/>',
             '<path d="M38 48 Q42 64 38 86" stroke="#ffffff" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".6"/>',
             f'<ellipse cx="50" cy="36" rx="20" ry="4.2" fill="#eef6fb" stroke="{INK}" stroke-width="2.2"/>',
-            f'<ellipse cx="50" cy="44" rx="18.5" ry="3" fill="{liquid}"/>', steam(50, 26, 2, 10)]
+            f'<ellipse cx="50" cy="44" rx="18.5" ry="3" fill="{liquid}"/>', topping(top, 50, 44, 18.5, 3), steam(50, 26, 2, 10)]
     inner = ''.join(parts)
     return (f'<svg class="art" xmlns="http://www.w3.org/2000/svg" viewBox="0 -2 110 110">'
             f'<g transform="translate(50 106) scale({k}) translate(-50 -106)">{inner}</g></svg>')
