@@ -366,9 +366,20 @@
           <button data-k="outside">💵 من خارج الصندوق</button>
         </div>
         <div class="muted small" id="puPayHint" style="margin-top:6px"></div>
-        <div class="row" id="puDownWrap" style="display:none;margin-top:8px">
-          <label class="muted small">دفعة أولى من الصندوق (اختياري)</label>
-          <input id="puDown" type="number" step="any" min="0" inputmode="decimal" style="width:150px" oninput="renderPurchase()">
+        <div id="puDownWrap" style="display:none;margin-top:8px">
+          <div class="row">
+            <label class="muted small">عملة الدين</label>
+            <div class="tabs2" id="puCur"><button data-c="SYP" class="active">ل.س سوري</button><button data-c="USD">$ دولار</button></div>
+            <span class="row" id="puRateWrap" style="display:none">
+              <label class="muted small">سعر الصرف: 1$ =</label>
+              <input id="puRate" type="number" step="any" min="0" inputmode="decimal" style="width:120px" oninput="renderPurchase()">
+              <span class="muted small">ل.س</span>
+            </span>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <label class="muted small">دفعة أولى من الصندوق بالليرة (اختياري)</label>
+            <input id="puDown" type="number" step="any" min="0" inputmode="decimal" style="width:150px" oninput="renderPurchase()">
+          </div>
         </div>
       </div>
       <div class="totals">
@@ -575,6 +586,12 @@
         <div class="spacer"></div>
         <label class="row" style="gap:6px;cursor:pointer"><input type="checkbox" id="dbAll" onchange="renderDebts()"> عرض المسدّد أيضاً</label>
         <button class="btn" onclick="openDebtOpen()">➕ دين سابق</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="muted small">💵 سعر صرف الدولار لتقييم الديون بالدولار: 1$ =</label>
+        <input id="dbRate" type="number" step="any" min="0" inputmode="decimal" style="width:130px">
+        <span class="muted small">ل.س</span>
+        <button class="btn" onclick="saveDbRate()">حفظ</button>
       </div>
       <p class="muted small" style="margin-bottom:0">البضاعة المأخوذة بالدين تدخل المخزون ولا تُخصم من الصندوق. عند التسديد تختار إن كان من الصندوق. «دين سابق» لتسجيل ديون كانت قبل استخدام البرنامج.</p>
     </div>
@@ -807,9 +824,15 @@
     <h2 id="dmTitle"></h2>
     <div id="dmSupWrap"><label>المورد / التاجر *</label><input id="dmSupplier" list="supplierList"></div>
     <div class="muted" id="dmInfo"></div>
-    <label>المبلغ *</label><input id="dmAmt" type="number" step="any" min="0" inputmode="decimal" required>
+    <label>العملة</label>
+    <div class="tabs2" id="dmCur"><button type="button" data-c="SYP" class="active">ل.س سوري</button><button type="button" data-c="USD">$ دولار</button></div>
+    <label>المبلغ *</label><input id="dmAmt" type="number" step="any" min="0" inputmode="decimal" required oninput="dmCalc()">
     <label>ملاحظة</label><input id="dmNote">
-    <label class="chk" id="dmBoxWrap"><input type="checkbox" id="dmFromBox" checked> 💰 دُفع المبلغ من الصندوق</label>
+    <label class="chk" id="dmBoxWrap"><input type="checkbox" id="dmFromBox" checked onchange="dmCalc()"> 💰 دُفع المبلغ من الصندوق</label>
+    <div id="dmRateWrap" style="display:none">
+      <label>سعر الصرف: 1$ = كم ليرة؟ (لحساب ما يُخصم من الصندوق)</label><input id="dmRate" type="number" step="any" min="0" inputmode="decimal" oninput="dmCalc()">
+    </div>
+    <div class="profit-box" id="dmCalcBox" style="display:none"></div>
     <div class="row" style="margin-top:16px">
       <button class="btn g" type="submit">حفظ</button>
       <button class="btn" type="button" onclick="closeModal('debtModal')">إلغاء</button>
@@ -1802,7 +1825,10 @@ function renderPurchase(){
   $('#puTotal').innerHTML = money(total);
   const started = !!db.settings.cashStart, pay = puPayAmounts(total);
   $('#puBoxT').style.display = started && pay.box > 0 ? '' : 'none';
-  $('#puDebtT').style.display = pay.debt > 0 ? '' : 'none'; $('#puDebtAmt').innerHTML = money(pay.debt);
+  $('#puDebtT').style.display = pay.debt > 0 ? '' : 'none';
+  if(puCur === 'USD'){ const rt = parseFloat($('#puRate').value) || 0;
+    $('#puDebtAmt').innerHTML = rt > 0 ? `${num(pay.debt / rt)} $ <span class="small muted">(${num(pay.debt)} ل.س)</span>` : '<span class="small">اكتب سعر الصرف</span>'; }
+  else $('#puDebtAmt').innerHTML = money(pay.debt);
   if(started){ const after = cashBalance() - pay.box; $('#puBoxAfter').innerHTML = money(after); $('#puBoxAfter').className = after < 0 ? 'neg' : ''; }
   fillSuppliers();
   renderPurchaseList();
@@ -1815,6 +1841,8 @@ function savePurchase(){
   if(!items.length) return toast('اكتب الكميات');
   const total = r2(items.reduce((a,i) => a + i.qty * i.cost, 0)), pay = puPayAmounts(total), supplier = $('#puSupplier').value.trim();
   if(puPay === 'debt' && !supplier){ alert('اكتب اسم المورد / التاجر حتى يُسجّل الدين عليه'); $('#puSupplier').focus(); return; }
+  const puRt = parseFloat($('#puRate').value) || 0, usdDebt = puPay === 'debt' && puCur === 'USD' && pay.debt > 0;
+  if(usdDebt && !(puRt > 0)){ alert('اكتب سعر صرف الدولار حتى يُسجّل الدين بالدولار'); $('#puRate').focus(); return; }
   if(pay.box > 0 && db.settings.cashStart){ const bal = cashBalance(); if(pay.box > bal && !confirm(`المبلغ ${num(pay.box)} أكبر من رصيد الصندوق (${num(bal)}).\nهل تريد المتابعة؟ سيصبح الصندوق بالسالب.`)) return; }
   items.forEach(i => {
     const p = prodById(i.pid); if(!p) return;
@@ -1823,13 +1851,15 @@ function savePurchase(){
     if(ch) pushHistory(p);
   });
   const pu = {id:uid(), no:db.nextPurchase++, date:new Date().toISOString(), supplier, note:$('#puNote').value.trim(), items, total,
-              pay:puPay, boxPaid:pay.box, debt:pay.debt, fromBox:pay.box > 0};
+              pay:puPay, boxPaid:pay.box, debt:pay.debt, fromBox:pay.box > 0,
+              ...(usdDebt ? {debtCur:'USD', rate:r4(puRt), debtUsd:r2(pay.debt / puRt)} : {})};
+  if(usdDebt) setUsdRate(r4(puRt));
   db.purchases.push(pu);
   audit('purchase', `فاتورة شراء #${pu.no} — ثمن ${purchaseLabel(pu)}`,
     `الإجمالي ${num(total)} — ${payText(pu)}${pu.supplier ? ' — المورد ' + pu.supplier : ''} — ` +
     items.map(i => `${i.name} ×${num(i.qty)} ${i.unit} بتكلفة ${num(i.cost)}${i.cost !== i.oldCost ? ' (كانت ' + num(i.oldCost) + ')' : ''}`).join('، '), areaOfItems(items));
   save(); beep(true);
-  pcart = []; $('#puSupplier').value = ''; $('#puNote').value = ''; $('#puDown').value = ''; setPuPay('box');
+  pcart = []; $('#puSupplier').value = ''; $('#puNote').value = ''; $('#puDown').value = ''; setPuCur('SYP'); setPuPay('box');
   renderPurchase();
   toast(`✔ دخلت البضاعة المخزون — ${payText(pu)}`);
 }
@@ -1857,7 +1887,7 @@ function viewPurchase(id){
 }
 function deletePurchase(id){
   const x = db.purchases.find(y => y.id === id);
-  if(!confirm(`حذف فاتورة الشراء #${x.no}؟\nستُخصم كمياتها من المخزون${boxPaidOf(x) ? ' ويُعاد ' + num(boxPaidOf(x)) + ' إلى الصندوق' : ''}${debtOf(x) ? ' ويُلغى دينها ' + num(debtOf(x)) + ' للمورد ' + (x.supplier || '') : ''}.\n(أسعار التكلفة لا ترجع تلقائياً)`)) return;
+  if(!confirm(`حذف فاتورة الشراء #${x.no}؟\nستُخصم كمياتها من المخزون${boxPaidOf(x) ? ' ويُعاد ' + num(boxPaidOf(x)) + ' إلى الصندوق' : ''}${debtOf(x) ? ' ويُلغى دينها ' + fmtCur(debtAmtOf(x), debtCurOf(x)) + ' للمورد ' + (x.supplier || '') : ''}.\n(أسعار التكلفة لا ترجع تلقائياً)`)) return;
   x.items.forEach(i => { const p = prodById(i.pid); if(p && !p.recipe) p.qty = r4(p.qty - i.qty); });
   db.purchases = db.purchases.filter(y => y.id !== id);
   audit('purchase', `حذف فاتورة شراء #${x.no}`, `الإجمالي ${num(x.total)} — ${payText(x)} (أُلغي) — خُصمت الكميات: ` + x.items.map(i => `${i.name} ×${num(i.qty)}`).join('، '), areaOfItems(x.items));
@@ -1865,9 +1895,9 @@ function deletePurchase(id){
 }
 
 /* ===================== طريقة دفع المشتريات ===================== */
-let puPay = 'box';
+let puPay = 'box', puCur = 'SYP';
 const PU_HINT = {box:'يُخصم المبلغ من الصندوق الآن.',
-  debt:'البضاعة تدخل المخزون، والمبلغ يُسجّل ديناً على المحل للمورد في صفحة الديون — لا يُخصم من الصندوق.',
+  debt:'البضاعة تدخل المخزون، والمبلغ يُسجّل ديناً على المحل للمورد في صفحة الديون (بالليرة أو بالدولار) — لا يُخصم من الصندوق.',
   outside:'دفعته من خارج الصندوق (من مالك الخاص) — لا يُخصم من الصندوق ولا يُسجّل ديناً.'};
 function setPuPay(k){
   puPay = k;
@@ -1876,72 +1906,122 @@ function setPuPay(k){
   $('#puDownWrap').style.display = k === 'debt' ? '' : 'none';
   renderPurchase();
 }
+function setPuCur(c){
+  puCur = c;
+  document.querySelectorAll('#puCur button').forEach(b => b.classList.toggle('active', b.dataset.c === c));
+  $('#puRateWrap').style.display = c === 'USD' ? '' : 'none';
+  if(c === 'USD' && !$('#puRate').value && usdRate()) $('#puRate').value = usdRate();
+  renderPurchase();
+}
 $('#puPay').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if(b) setPuPay(b.dataset.k); });
+$('#puCur').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if(b) setPuCur(b.dataset.c); });
 function puPayAmounts(total){
   if(puPay === 'box') return {box:r2(total), debt:0};
   if(puPay === 'debt'){ const down = r2(Math.min(Math.max(parseFloat($('#puDown').value) || 0, 0), total)); return {box:down, debt:r2(total - down)}; }
   return {box:0, debt:0};
 }
 const boxPaidOf = x => x.boxPaid != null ? x.boxPaid : (x.fromBox ? x.total : 0);
-const debtOf = x => x.debt || 0;
+const debtOf = x => x.debt || 0;                                       // الدين بالليرة (قيمة البضاعة)
+const debtCurOf = x => x.debtCur || 'SYP';                             // عملة الدين
+const debtAmtOf = x => x.debtCur === 'USD' ? (x.debtUsd || 0) : debtOf(x); // الدين بعملته
+const fmtCur = (n, c) => c === 'USD' ? num(n) + ' $' : money(n);
+const usdRate = () => +db.settings.usdRate || 0;
+function setUsdRate(r){ if(r > 0) db.settings.usdRate = r; }
 function payLabel(x){
   const b = boxPaidOf(x), d = debtOf(x);
-  if(d > 0) return `📒 دين ${num(d)}${b ? ' + 💰 ' + num(b) + ' من الصندوق' : ''}`;
+  if(d > 0) return `📒 دين ${fmtCur(debtAmtOf(x), debtCurOf(x))}${b ? ' + 💰 ' + num(b) + ' من الصندوق' : ''}`;
   return b > 0 ? '💰 من الصندوق' : '💵 من خارج الصندوق';
 }
 function payText(x){
   const b = boxPaidOf(x), d = debtOf(x);
-  if(d > 0) return `سُجّل دين ${num(d)} للمورد ${x.supplier}${b ? ' ودُفع ' + num(b) + ' من الصندوق' : ''}`;
+  if(d > 0) return `سُجّل دين ${fmtCur(debtAmtOf(x), debtCurOf(x))}${debtCurOf(x) === 'USD' ? ' (بسعر ' + num(x.rate) + ')' : ''} للمورد ${x.supplier}${b ? ' ودُفع ' + num(b) + ' من الصندوق' : ''}`;
   return b > 0 ? `خُصم ${num(b)} من الصندوق` : 'دُفع من خارج الصندوق';
 }
 
-/* ===================== الديون ===================== */
-// حساب كل مورد: ديون المشتريات + الديون السابقة − التسديدات
+/* ===================== الديون (بالليرة أو بالدولار) ===================== */
+// حساب كل مورد، لكل عملة لوحدها: ديون المشتريات + الديون السابقة − التسديدات
 function supplierLedger(){
-  const m = {}, get = n => m[n] || (m[n] = {name:n, credit:0, paid:0, rows:[]});
-  db.purchases.forEach(x => { if(debtOf(x) > 0){ const o = get(x.supplier || 'بدون اسم'); o.credit += debtOf(x);
-    o.rows.push({date:x.date, amount:debtOf(x), text:`فاتورة شراء #${x.no} — ثمن ${purchaseLabel(x)}${boxPaidOf(x) ? ` (الإجمالي ${num(x.total)}، دُفع ${num(boxPaidOf(x))})` : ''}`}); } });
-  db.debts.forEach(x => { const o = get(x.supplier);
-    if(x.type === 'pay'){ o.paid += x.amount; o.rows.push({date:x.date, amount:-x.amount, id:x.id, text:`تسديد${x.fromBox ? ' من الصندوق' : ' من خارج الصندوق'}${x.note ? ' — ' + x.note : ''}`}); }
-    else { o.credit += x.amount; o.rows.push({date:x.date, amount:x.amount, id:x.id, text:`دين سابق${x.note ? ' — ' + x.note : ''}`}); } });
-  return Object.values(m).map(o => { o.left = r2(o.credit - o.paid); o.rows.sort((a,b) => new Date(a.date) - new Date(b.date)); return o; });
+  const m = {}, get = n => m[n] || (m[n] = {name:n, cur:{SYP:{credit:0, paid:0}, USD:{credit:0, paid:0}}, rows:[]});
+  db.purchases.forEach(x => { const a = debtAmtOf(x); if(a > 0){ const c = debtCurOf(x), o = get(x.supplier || 'بدون اسم'); o.cur[c].credit += a;
+    o.rows.push({date:x.date, cur:c, amount:a, text:`فاتورة شراء #${x.no} — ثمن ${purchaseLabel(x)}${c === 'USD' ? ` (${num(debtOf(x))} ل.س بسعر ${num(x.rate)})` : ''}${boxPaidOf(x) ? ` — دفعة أولى ${num(boxPaidOf(x))} ل.س` : ''}`}); } });
+  db.debts.forEach(x => { const c = x.cur || 'SYP', o = get(x.supplier);
+    if(x.type === 'pay'){ o.cur[c].paid += x.amount; o.rows.push({date:x.date, cur:c, amount:-x.amount, id:x.id,
+      text:`تسديد${x.fromBox ? ' من الصندوق' + (c === 'USD' ? ` (${num(x.boxAmount)} ل.س بسعر ${num(x.rate)})` : '') : ' من خارج الصندوق'}${x.note ? ' — ' + x.note : ''}`}); }
+    else { o.cur[c].credit += x.amount; o.rows.push({date:x.date, cur:c, amount:x.amount, id:x.id, text:`دين سابق${x.note ? ' — ' + x.note : ''}`}); } });
+  return Object.values(m).map(o => {
+    for(const c in o.cur) o.cur[c].left = r2(o.cur[c].credit - o.cur[c].paid);
+    o.open = Object.keys(o.cur).filter(c => o.cur[c].left > 0.004);
+    o.value = Math.max(o.cur.SYP.left, 0) + Math.max(o.cur.USD.left, 0) * usdRate();
+    o.rows.sort((a,b) => new Date(a.date) - new Date(b.date));
+    return o;
+  });
 }
-const totalDebt = () => supplierLedger().reduce((a,o) => a + Math.max(o.left, 0), 0);
+function debtTotals(){ const t = {SYP:0, USD:0}; supplierLedger().forEach(o => { for(const c in t) t[c] += Math.max(o.cur[c].left, 0); }); return t; }
+const totalDebt = () => { const t = debtTotals(); return t.SYP + t.USD * usdRate(); }; // بالليرة (الدولار بسعر التقييم)
+function debtText(t){ const a = []; if(t.SYP > 0.004) a.push(money(t.SYP)); if(t.USD > 0.004) a.push(num(t.USD) + ' $'); return a.join(' + ') || money(0); }
+const curPart = (o, k) => ({SYP:o.cur.SYP[k], USD:o.cur.USD[k]});
 function fillSuppliers(){
   $('#supplierList').innerHTML = [...new Set(db.purchases.map(x => x.supplier).concat(db.debts.map(x => x.supplier)).filter(Boolean))].map(x => `<option value="${esc(x)}">`).join('');
+}
+function saveDbRate(){
+  const r = r4($('#dbRate').value); if(!(r > 0)) return alert('اكتب سعر الصرف');
+  const old = usdRate(); setUsdRate(r);
+  audit('debt', 'تحديث سعر صرف الدولار للديون', `من ${old ? num(old) : '—'} إلى ${num(r)}`);
+  save(); renderDebts(); toast('✔ تم حفظ سعر الصرف');
 }
 let dbNames = [];
 function renderDebts(){
   fillSuppliers();
-  const L = supplierLedger().sort((a,b) => b.left - a.left), open = L.filter(o => o.left > 0.004);
-  const now = new Date(), monthPaid = inRange(db.debts.filter(x => x.type === 'pay'), startOfMonth(now), addDays(startOfDay(now), 1)).reduce((a,x) => a + x.amount, 0);
-  $('#dbStats').innerHTML = stat('📒 إجمالي الديون علينا', `<span class="neg">${money(open.reduce((a,o) => a + o.left, 0))}</span>`, 'r', `لـ ${open.length} مورد`) +
-    stat('مسدّد هذا الشهر', money(monthPaid), 'g') + (db.settings.cashStart ? stat('💰 رصيد الصندوق', money(cashBalance()), 'v') : '');
+  if(document.activeElement !== $('#dbRate')) $('#dbRate').value = usdRate() || '';
+  const L = supplierLedger().sort((a,b) => b.value - a.value), open = L.filter(o => o.open.length), t = debtTotals();
+  const now = new Date(), paidM = {SYP:0, USD:0};
+  inRange(db.debts.filter(x => x.type === 'pay'), startOfMonth(now), addDays(startOfDay(now), 1)).forEach(x => paidM[x.cur || 'SYP'] += x.amount);
+  $('#dbStats').innerHTML =
+    stat('📒 ديون بالليرة', `<span class="neg">${money(t.SYP)}</span>`, 'r') +
+    stat('💵 ديون بالدولار', `<span class="neg">${num(t.USD)} $</span>`, 'r', t.USD && usdRate() ? `≈ ${money(t.USD * usdRate())}` : (t.USD ? 'حدّد سعر الصرف لتقييمها' : '')) +
+    stat('إجمالي الديون بالليرة', money(totalDebt()), 'o', `لـ ${open.length} مورد${t.USD && usdRate() ? ' — الدولار بسعر ' + num(usdRate()) : ''}`) +
+    stat('مسدّد هذا الشهر', debtText(paidM), 'g');
   const list = $('#dbAll').checked ? L : open;
   dbNames = list.map(o => o.name);
-  $('#dbList').innerHTML = list.length ? list.map((o,i) => `<div class="cat" style="--c:${o.left > 0.004 ? '#d33f3f' : '#15935a'}">
-      <div class="row"><span class="nm">${esc(o.name)}</span><div class="spacer"></div>${o.left > 0.004 ? '' : '<span class="chip" style="background:#e3f5ec;color:#0f7a4a">✔ مسدّد</span>'}</div>
+  $('#dbList').innerHTML = list.length ? list.map((o,i) => `<div class="cat" style="--c:${o.open.length ? '#d33f3f' : '#15935a'}">
+      <div class="row"><span class="nm">${esc(o.name)}</span><div class="spacer"></div>${o.open.length ? '' : '<span class="chip" style="background:#e3f5ec;color:#0f7a4a">✔ مسدّد</span>'}</div>
       <div class="kv">
-        <div><span>المتبقي علينا</span><b class="${o.left > 0.004 ? 'neg' : 'pos'}">${money(o.left)}</b></div>
-        <div><span>إجمالي الدين</span><b>${money(o.credit)}</b></div>
-        <div><span>المسدّد</span><b>${money(o.paid)}</b></div>
-        <div><span>آخر حركة</span><b>${o.rows.length ? fmtDate(o.rows[o.rows.length-1].date) : '—'}</b></div>
+        <div style="grid-column:1/-1"><span>المتبقي علينا</span><b class="${o.open.length ? 'neg' : 'pos'}" style="font-size:17px">${debtText(curPart(o, 'left'))}</b></div>
+        <div><span>إجمالي الدين</span><b>${debtText(curPart(o, 'credit'))}</b></div>
+        <div><span>المسدّد</span><b>${debtText(curPart(o, 'paid'))}</b></div>
+        <div style="grid-column:1/-1"><span>آخر حركة</span><b>${o.rows.length ? fmtDate(o.rows[o.rows.length-1].date) : '—'}</b></div>
       </div>
       <div class="row">
-        ${o.left > 0.004 ? `<button class="btn-icon" onclick="openDebtPay(${i})">💵 تسديد</button>` : ''}
+        ${o.open.length ? `<button class="btn-icon" onclick="openDebtPay(${i})">💵 تسديد</button>` : ''}
         <button class="btn-icon" onclick="viewDebt(${i})">📜 كشف حساب</button>
       </div></div>`).join('')
     : '<div class="card muted">لا توجد ديون ✔ — عند إدخال بضاعة بالدين من صفحة المشتريات اختر «📒 دين على المحل» وستظهر هنا.</div>';
 }
-let dmMode = 'pay', dmSupplier = '';
+let dmMode = 'pay', dmSupplier = '', dmCurV = 'SYP';
+function setDmCur(c){
+  dmCurV = c;
+  document.querySelectorAll('#dmCur button').forEach(b => b.classList.toggle('active', b.dataset.c === c));
+  if(dmMode === 'pay'){ const o = supplierLedger().find(x => x.name === dmSupplier); $('#dmAmt').value = o && o.cur[c].left > 0 ? o.cur[c].left : ''; }
+  if(c === 'USD' && !$('#dmRate').value && usdRate()) $('#dmRate').value = usdRate();
+  dmCalc();
+}
+$('#dmCur').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if(b) setDmCur(b.dataset.c); });
+function dmCalc(){
+  const usdBox = dmMode === 'pay' && dmCurV === 'USD' && !!db.settings.cashStart && $('#dmFromBox').checked;
+  $('#dmRateWrap').style.display = usdBox ? '' : 'none';
+  const a = parseFloat($('#dmAmt').value) || 0, r = parseFloat($('#dmRate').value) || 0;
+  $('#dmCalcBox').style.display = usdBox && a > 0 && r > 0 ? '' : 'none';
+  if(usdBox && a > 0 && r > 0) $('#dmCalcBox').innerHTML = `يُخصم من الصندوق: <b>${money(a * r)}</b> (${num(a)} $ × ${num(r)})`;
+}
 function openDebtPay(i){
   dmMode = 'pay'; dmSupplier = dbNames[i];
   const o = supplierLedger().find(x => x.name === dmSupplier);
   $('#dmTitle').textContent = '💵 تسديد دين — ' + dmSupplier;
   $('#dmSupWrap').style.display = 'none';
-  $('#dmInfo').innerHTML = `المتبقي عليك: <b class="neg">${money(o ? o.left : 0)}</b>`;
-  $('#dmAmt').value = o ? o.left : ''; $('#dmNote').value = '';
+  $('#dmInfo').innerHTML = `المتبقي عليك: <b class="neg">${debtText(curPart(o, 'left'))}</b>`;
+  $('#dmNote').value = ''; $('#dmRate').value = '';
   $('#dmBoxWrap').style.display = db.settings.cashStart ? '' : 'none'; $('#dmFromBox').checked = !!db.settings.cashStart;
+  setDmCur(o.cur.SYP.left > 0.004 ? 'SYP' : 'USD');
   openModal('debtModal'); focusIfDesktop($('#dmAmt'));
 }
 function openDebtOpen(){
@@ -1951,44 +2031,54 @@ function openDebtOpen(){
   $('#dmSupWrap').style.display = ''; $('#dmSupplier').value = '';
   $('#dmInfo').textContent = 'دين على المحل لمورد، لا يؤثر على المخزون ولا على الصندوق.';
   $('#dmAmt').value = ''; $('#dmNote').value = ''; $('#dmBoxWrap').style.display = 'none';
+  setDmCur('SYP');
   openModal('debtModal'); focusIfDesktop($('#dmSupplier'));
 }
 function saveDebt(e){
   e.preventDefault();
-  const amount = r2($('#dmAmt').value), note = $('#dmNote').value.trim();
+  const amount = r2($('#dmAmt').value), note = $('#dmNote').value.trim(), cur = dmCurV;
   const supplier = dmMode === 'pay' ? dmSupplier : $('#dmSupplier').value.trim();
   if(!supplier) return alert('اكتب اسم المورد');
   if(!(amount > 0)) return alert('اكتب المبلغ');
   if(dmMode === 'pay'){
-    const o = supplierLedger().find(x => x.name === supplier), left = o ? o.left : 0;
-    if(amount > left + 0.004 && !confirm(`المبلغ أكبر من المتبقي (${num(left)}). متابعة؟`)) return;
+    const o = supplierLedger().find(x => x.name === supplier), left = o ? o.cur[cur].left : 0;
+    if(amount > left + 0.004 && !confirm(`المبلغ أكبر من المتبقي بهذه العملة (${fmtCur(left, cur)}). متابعة؟`)) return;
     const fromBox = !!db.settings.cashStart && $('#dmFromBox').checked;
-    if(fromBox && amount > cashBalance() && !confirm(`المبلغ أكبر من رصيد الصندوق (${num(cashBalance())}). متابعة؟`)) return;
-    db.debts.push({id:uid(), date:new Date().toISOString(), supplier, type:'pay', amount, fromBox, note});
-    audit('debt', `تسديد دين — ${supplier}: ${num(amount)}`, `${fromBox ? 'من الصندوق' : 'من خارج الصندوق'} — المتبقي بعده ${num(left - amount)}${note ? ' — ' + note : ''}`);
+    let rate, boxAmount;
+    if(fromBox && cur === 'USD'){
+      rate = r4($('#dmRate').value);
+      if(!(rate > 0)){ alert('اكتب سعر الصرف لحساب ما يُخصم من الصندوق'); $('#dmRate').focus(); return; }
+      boxAmount = r2(amount * rate); setUsdRate(rate);
+    }
+    const fromBoxSyp = fromBox ? (boxAmount != null ? boxAmount : amount) : 0;
+    if(fromBox && fromBoxSyp > cashBalance() && !confirm(`المبلغ أكبر من رصيد الصندوق (${num(cashBalance())}). متابعة؟`)) return;
+    db.debts.push({id:uid(), date:new Date().toISOString(), supplier, type:'pay', cur, amount, fromBox, note, ...(boxAmount != null ? {rate, boxAmount} : {})});
+    audit('debt', `تسديد دين — ${supplier}: ${fmtCur(amount, cur)}`,
+      `${fromBox ? 'من الصندوق' + (boxAmount != null ? ` (${num(boxAmount)} ل.س بسعر ${num(rate)})` : '') : 'من خارج الصندوق'} — المتبقي بعده ${fmtCur(left - amount, cur)}${note ? ' — ' + note : ''}`);
   } else {
-    db.debts.push({id:uid(), date:new Date().toISOString(), supplier, type:'open', amount, note});
-    audit('debt', `دين سابق — ${supplier}: ${num(amount)}`, note);
+    db.debts.push({id:uid(), date:new Date().toISOString(), supplier, type:'open', cur, amount, note});
+    audit('debt', `دين سابق — ${supplier}: ${fmtCur(amount, cur)}`, note);
   }
   save(); closeModal('debtModal'); renderDebts(); toast('✔ تم الحفظ');
 }
 function viewDebt(i){
   const name = dbNames[i], o = supplierLedger().find(x => x.name === name); if(!o) return;
-  let run = 0;
+  const run = {SYP:0, USD:0};
   $('#viewBody').innerHTML = `<h2 style="margin:0 0 4px">📜 كشف حساب — ${esc(name)}</h2>
-    <div class="muted">المتبقي علينا: <b class="${o.left > 0 ? 'neg' : 'pos'}">${money(o.left)}</b></div>
+    <div class="muted">المتبقي علينا: <b class="${o.open.length ? 'neg' : 'pos'}">${debtText(curPart(o, 'left'))}</b></div>
     <div class="tbl-wrap"><table style="margin-top:12px"><thead><tr><th>التاريخ</th><th>البيان</th><th>دين</th><th>تسديد</th><th>الرصيد</th><th></th></tr></thead>
-    <tbody>${o.rows.map(r => { run += r.amount; return `<tr><td class="small">${fmtDateTime(r.date)}</td><td>${esc(r.text)}</td>
-      <td class="money-out">${r.amount > 0 ? num(r.amount) : ''}</td><td class="money-in">${r.amount < 0 ? num(-r.amount) : ''}</td><td><b>${num(run)}</b></td>
+    <tbody>${o.rows.map(r => { run[r.cur] += r.amount; return `<tr><td class="small">${fmtDateTime(r.date)}</td><td>${esc(r.text)}</td>
+      <td class="money-out">${r.amount > 0 ? fmtCur(r.amount, r.cur) : ''}</td><td class="money-in">${r.amount < 0 ? fmtCur(-r.amount, r.cur) : ''}</td>
+      <td><b>${fmtCur(r2(run[r.cur]), r.cur)}</b></td>
       <td>${r.id ? `<button class="btn-icon danger" onclick="deleteDebt('${r.id}')">🗑</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>`;
-  $('#viewActions').innerHTML = `${o.left > 0.004 ? `<button class="btn g" onclick="closeModal('viewModal');openDebtPay(${i})">💵 تسديد</button>` : ''}<button class="btn" onclick="closeModal('viewModal')">إغلاق</button>`;
+  $('#viewActions').innerHTML = `${o.open.length ? `<button class="btn g" onclick="closeModal('viewModal');openDebtPay(${i})">💵 تسديد</button>` : ''}<button class="btn" onclick="closeModal('viewModal')">إغلاق</button>`;
   openModal('viewModal');
 }
 function deleteDebt(id){
-  const x = db.debts.find(y => y.id === id);
-  if(!confirm(`حذف ${x.type === 'pay' ? 'التسديد' : 'الدين السابق'} بمبلغ ${num(x.amount)} — ${x.supplier}؟${x.type === 'pay' && x.fromBox ? '\nسيعود المبلغ إلى الصندوق.' : ''}`)) return;
+  const x = db.debts.find(y => y.id === id), cur = x.cur || 'SYP';
+  if(!confirm(`حذف ${x.type === 'pay' ? 'التسديد' : 'الدين السابق'} بمبلغ ${fmtCur(x.amount, cur)} — ${x.supplier}؟${x.type === 'pay' && x.fromBox ? '\nسيعود ' + num(x.boxAmount != null ? x.boxAmount : x.amount) + ' ل.س إلى الصندوق.' : ''}`)) return;
   db.debts = db.debts.filter(y => y.id !== id);
-  audit('debt', `حذف ${x.type === 'pay' ? 'تسديد' : 'دين سابق'} — ${x.supplier}`, num(x.amount));
+  audit('debt', `حذف ${x.type === 'pay' ? 'تسديد' : 'دين سابق'} — ${x.supplier}`, fmtCur(x.amount, cur));
   save(); closeModal('viewModal'); renderDebts();
 }
 
@@ -2002,18 +2092,19 @@ function cashMoves(){
   db.sales.forEach(x => after(x.date) && mv.push({date:x.date, kind:'sale', amount:x.total, text:`فاتورة بيع #${x.no}`}));
   db.topups.forEach(x => after(x.date) && mv.push({date:x.date, kind:'topup', amount:x.price, text:`وحدات #${x.no} — ${x.providerName}`}));
   db.purchases.forEach(x => boxPaidOf(x) > 0 && after(x.date) && mv.push({date:x.date, kind:'purchase', amount:-boxPaidOf(x), text:`مشتريات #${x.no} — ثمن ${purchaseLabel(x)}${x.supplier ? ' (' + x.supplier + ')' : ''}${debtOf(x) ? ' — دفعة أولى والباقي دين' : ''}`}));
-  db.debts.forEach(x => x.type === 'pay' && x.fromBox && after(x.date) && mv.push({date:x.date, kind:'debtpay', amount:-x.amount, text:`تسديد دين — ${x.supplier}${x.note ? ' — ' + x.note : ''}`}));
+  db.debts.forEach(x => x.type === 'pay' && x.fromBox && after(x.date) && mv.push({date:x.date, kind:'debtpay', amount:-(x.boxAmount != null ? x.boxAmount : x.amount),
+    text:`تسديد دين — ${x.supplier}${x.cur === 'USD' ? ` (${num(x.amount)} $ بسعر ${num(x.rate)})` : ''}${x.note ? ' — ' + x.note : ''}`}));
   db.charges.forEach(x => x.fromBox !== false && after(x.date) && mv.push({date:x.date, kind:'charge', amount:-x.paid, text:`شحن رصيد ${x.providerName} (${num(x.units)} وحدة)`}));
   db.cash.forEach(x => after(x.date) && mv.push({date:x.date, kind:x.type, amount:x.amount, id:x.id, text:(CASH_LBL[x.type] || '') + (x.note ? ' — ' + x.note : '')}));
   return mv.sort((a,b) => new Date(a.date) - new Date(b.date));
 }
 function cashBalance(){ return cashMoves().reduce((a,m) => a + m.amount, 0); }
 function boxStats(stock){
-  const started = !!db.settings.cashStart, bal = started ? cashBalance() : 0, debt = totalDebt();
-  if(!started && !debt) return '';
+  const started = !!db.settings.cashStart, bal = started ? cashBalance() : 0, debt = totalDebt(), dt = debtTotals();
+  if(!started && !debt && !dt.USD) return '';
   return (started ? stat('💰 رصيد الصندوق', `<span class="${bal < 0 ? 'neg' : ''}">${money(bal)}</span>`, 'v') : '') +
-         (debt ? stat('📒 الديون علينا', `<span class="neg">${money(debt)}</span>`, 'r') : '') +
-         stat('صافي رأس المال', money(stock + bal - debt), 'o', (started ? 'بضاعة + صندوق' : 'بضاعة') + (debt ? ' − ديون' : ''));
+         (debt || dt.USD ? stat('📒 الديون علينا', `<span class="neg">${debtText(dt)}</span>`, 'r', dt.USD && usdRate() ? `≈ ${money(debt)} بسعر ${num(usdRate())}` : '') : '') +
+         stat('صافي رأس المال', money(stock + bal - debt), 'o', (started ? 'بضاعة + صندوق' : 'بضاعة') + (debt ? ' − ديون' : '') + (dt.USD && !usdRate() ? ' (ديون الدولار غير محسوبة — حدّد سعر الصرف في صفحة الديون)' : ''));
 }
 function boxDay(d){
   const from = startOfDay(d), to = addDays(from, 1);
@@ -2400,7 +2491,9 @@ function demoData(){
     db.settings.cashStart = d0;
     db.cash.push({id:uid(), date:d0, type:'open', amount:500000});
     db.cash.push({id:uid(), date:addDays(today, -5).toISOString(), type:'expense', amount:-75000, note:'كهرباء'});
-    db.debts.push({id:uid(), date:addDays(today, -20).toISOString(), supplier:'موزع المشروبات', type:'open', amount:350000, note:'دين قديم'});
+    db.debts.push({id:uid(), date:addDays(today, -20).toISOString(), supplier:'موزع المشروبات', type:'open', cur:'SYP', amount:350000, note:'دين قديم'});
+    db.debts.push({id:uid(), date:addDays(today, -12).toISOString(), supplier:'تاجر الدخان', type:'open', cur:'USD', amount:150, note:'دين قديم بالدولار'});
+    if(!usdRate()) db.settings.usdRate = 12500;
   }
   audit('system', 'إضافة بيانات تجريبية');
   save(); toast('تمت إضافة البيانات التجريبية'); showTab('dash');
