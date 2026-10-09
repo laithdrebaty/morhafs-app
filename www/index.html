@@ -155,6 +155,7 @@
   <nav id="nav">
     <button data-tab="dash" class="active">📊 الإحصائيات</button>
     <button data-tab="sale">🧾 فاتورة بيع</button>
+    <button data-tab="coffee">☕ آلة القهوة</button>
     <button data-tab="purchases">🛒 المشتريات</button>
     <button data-tab="box">💰 الصندوق</button>
     <button data-tab="debts">📒 الديون</button>
@@ -336,7 +337,6 @@
         <div class="spacer"></div>
         <input id="prodSearch" placeholder="🔍 بحث بالاسم أو الباركود" oninput="renderProducts()">
         <select id="prodTag" onchange="renderProducts()"></select>
-        <select id="prodKind" onchange="renderProducts()"><option value="">كل الأنواع</option><option value="item">📦 للبيع</option><option value="recipe">🧪 مركّب</option><option value="material">🧱 مواد خام</option></select>
         <button class="btn p" onclick="openProductModal(null)">➕ إضافة منتج</button>
       </div>
       <div class="note">💡 تغيير سعر أي منتج ينطبق على <b>الفواتير الجديدة فقط</b> — الفواتير القديمة تبقى محفوظة بأسعارها وأرباحها وقت البيع.</div>
@@ -353,6 +353,62 @@
     </div>
   </section>
 
+  <!-- ============ آلة القهوة ============ -->
+  <section id="tab-coffee">
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">☕ آلة القهوة</h2>
+        <div class="spacer"></div>
+        <button class="btn p" onclick="openProductModal(null,{kind:'recipe'})">➕ مشروب</button>
+        <button class="btn" onclick="openProductModal(null,{kind:'material'})">➕ مادة للآلة</button>
+      </div>
+      <p class="muted small" style="margin-bottom:0">المشروبات تُباع من «فاتورة بيع» بمسح الباركود، وعند بيع كل كاسة تُخصم موادها (كاسة، بن، سكر...) تلقائياً. شراء المواد يكون من «المشتريات».</p>
+    </div>
+    <div class="grid stats" id="cfStats" style="margin-bottom:16px"></div>
+    <div class="card">
+      <h3>☕ المشروبات</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>المشروب</th><th>المكوّنات لكل كاسة</th><th>التكلفة</th><th>سعر البيع</th><th>ربح الكاسة</th><th>يمكن تحضير</th><th>مباع هذا الشهر</th><th></th></tr></thead>
+          <tbody id="cfDrinks"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🧱 مواد الآلة</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>المادة</th><th>الكمية</th><th>تكلفة الوحدة</th><th>القيمة</th><th>مستهلك هذا الشهر</th><th>يكفي لـ</th><th></th></tr></thead>
+          <tbody id="cfMats"></tbody>
+          <tfoot id="cfMatsFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <h3 style="margin:0">📊 استهلاك المواد</h3>
+        <div class="spacer"></div>
+        <div class="tabs2" id="cfTabs">
+          <button data-p="today">اليوم</button>
+          <button data-p="week">هذا الأسبوع</button>
+          <button data-p="month" class="active">هذا الشهر</button>
+          <button data-p="lastMonth">الشهر الماضي</button>
+        </div>
+      </div>
+      <p class="muted small">كم استُهلك من كل مادة، ومتوسطها اليومي، وكم يوماً يكفي المخزون الحالي بنفس المعدّل.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>المادة</th><th>المستهلك</th><th>التكلفة (بسعر اليوم)</th><th>المتوسط اليومي</th><th>المتبقي</th><th>يكفي لـ</th></tr></thead>
+          <tbody id="cfUse"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row"><h3 style="margin:0">🕵️ آخر عمليات القهوة</h3><div class="spacer"></div><button class="btn" onclick="goAudit('coffee')">عرض الكل في السجل</button></div>
+      <div class="tbl-wrap" style="margin-top:10px"><table><tbody id="cfLog"></tbody></table></div>
+    </div>
+  </section>
+
   <!-- ============ المخزون ============ -->
   <section id="tab-stock">
     <div class="card">
@@ -361,7 +417,6 @@
         <div class="spacer"></div>
         <input id="stSearch" placeholder="🔍 بحث بالاسم أو الباركود" oninput="renderStock()">
         <select id="stTag" onchange="renderStock()"></select>
-        <select id="stKind" onchange="renderStock()"><option value="">كل الأنواع</option><option value="item">📦 للبيع</option><option value="recipe">🧪 مركّب</option><option value="material">🧱 مواد خام</option></select>
         <select id="stStatus" onchange="renderStock()">
           <option value="">كل الحالات</option><option value="ok">✅ متوفر</option><option value="low">⚠️ قليل</option><option value="out">⛔ نافد</option>
         </select>
@@ -466,16 +521,6 @@
       </div>
     </div>
     <div class="card">
-      <h3>☕ استهلاك المواد في الفترة</h3>
-      <p class="muted small">كم استُهلك من كل مادة داخلة في المشروبات والمنتجات المركّبة (كاسات، بن، سكر...)، ومتوسطها اليومي، وكم يوماً يكفي المخزون الحالي بنفس المعدّل.</p>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>المادة</th><th>المستهلك</th><th>التكلفة (بسعر اليوم)</th><th>المتوسط اليومي</th><th>المتبقي</th><th>يكفي لـ</th></tr></thead>
-          <tbody id="jardUse"></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card">
       <div class="row">
         <h3 style="margin:0">جرد المخزون الفعلي</h3>
         <div class="spacer"></div>
@@ -499,6 +544,12 @@
       <div class="row">
         <h2 style="margin:0">سجل العمليات</h2>
         <div class="spacer"></div>
+        <select id="auArea" onchange="renderAudit(true)">
+          <option value="">كل العمليات</option>
+          <option value="coffee">☕ القهوة والمشروبات</option>
+          <option value="goods">📦 باقي المنتجات</option>
+          <option value="general">⚙️ عام (صندوق، ديون، إعدادات)</option>
+        </select>
         <select id="auType" onchange="renderAudit(true)"></select>
         <label class="muted small">من</label><input type="date" id="auFrom" onchange="renderAudit(true)">
         <label class="muted small">إلى</label><input type="date" id="auTo" onchange="renderAudit(true)">
@@ -551,13 +602,14 @@
     <label>اسم المنتج *</label><input id="pName" required>
     <label>الباركود</label>
     <div class="row" style="flex-wrap:nowrap"><input id="pBarcode" placeholder="امسح أو اكتب الباركود"><button type="button" class="btn" onclick="openScanner(c=>{pBarcode.value=c},false)">📷</button></div>
-    <label>نوع المنتج</label>
+    <div id="pKindWrap" style="display:none">
     <div class="tabs2" id="pKind">
       <button type="button" data-k="item" class="active">📦 للبيع</button>
       <button type="button" data-k="recipe">🧪 مركّب (مشروب / وصفة)</button>
       <button type="button" data-k="material">🧱 مادة خام (للوصفات فقط)</button>
     </div>
-    <div class="muted small" id="pKindHint" style="margin-top:6px"></div>
+    </div>
+    <div class="muted small" id="pKindHint" style="margin-top:8px"></div>
     <input type="checkbox" id="pIsRecipe" style="display:none">
     <div class="pair">
       <div id="pCostWrap"><label>سعر التكلفة للوحدة *</label><input id="pCost" type="number" step="any" min="0" inputmode="decimal" required oninput="updatePmProfit()"></div>
@@ -580,9 +632,11 @@
     <label>تنبيه النفاد عندما تصبح الكمية أقل من أو تساوي (اختياري)</label>
     <input id="pMin" type="number" step="any" min="0" inputmode="decimal" placeholder="حسب الإعدادات العامة">
     <datalist id="unitList"><option value="قطعة"><option value="غرام"><option value="كيلو"><option value="مل"><option value="لتر"><option value="كيس"><option value="علبة"><option value="ظرف"><option value="كاسة"></datalist>
+    <div id="pTagsWrap">
     <label>الصنف (يمكن اختيار أكثر من صنف)</label>
     <div class="chips" id="pmTags"></div>
     <div class="row" style="flex-wrap:nowrap;margin-top:8px"><input id="pNewTag" placeholder="صنف جديد، مثال: دخان" style="flex:1;min-width:0"><button type="button" class="btn" onclick="pmAddTag()">➕ صنف</button></div>
+    </div>
     <div class="profit-box" id="pmProfit"></div>
     <div id="pmHist"></div>
     <div class="row" style="margin-top:16px">
@@ -722,8 +776,9 @@ function save(){
 
 /* ===================== سجل العمليات ===================== */
 const AUDIT_TYPES = {product:'منتجات', sale:'مبيعات', purchase:'مشتريات', cash:'صندوق', debt:'ديون', topup:'وحدات', balance:'رصيد', stock:'جرد', settings:'إعدادات', system:'نظام'};
-function audit(type, msg, details=''){
-  db.audit.push({id:uid(), t:new Date().toISOString(), type, msg, details});
+// area: coffee = القهوة والمشروبات، goods = باقي المنتجات، both = الاثنان، general = صندوق/ديون/إعدادات
+function audit(type, msg, details='', area){
+  db.audit.push({id:uid(), t:new Date().toISOString(), type, msg, details, area: area || 'general'});
   if(db.audit.length > 20000) db.audit.splice(0, db.audit.length - 20000);
 }
 
@@ -811,7 +866,7 @@ async function saveFile(name, content, mime){
 
 /* ===================== التبويبات ===================== */
 let currentTab = 'dash';
-const RENDER = {dash:()=>renderDashboard(), sale:()=>renderCart(), purchases:()=>renderPurchase(), box:()=>renderBox(), debts:()=>renderDebts(), products:()=>renderProducts(), stock:()=>renderStock(), tags:()=>renderTags(),
+const RENDER = {dash:()=>renderDashboard(), sale:()=>renderCart(), coffee:()=>renderCoffee(), purchases:()=>renderPurchase(), box:()=>renderBox(), debts:()=>renderDebts(), products:()=>renderProducts(), stock:()=>renderStock(), tags:()=>renderTags(),
                 invoices:()=>renderInvoices(), jard:()=>renderJard(), audit:()=>renderAudit(true), settings:()=>renderSettings()};
 function rerender(){ RENDER[currentTab](); }
 function showTab(t){
@@ -936,7 +991,7 @@ function checkout(){
   const sale = {id:uid(), no:db.nextInvoice++, date:new Date().toISOString(), items, total, cost, profit:r2(total-cost)};
   items.forEach(i => applyStock(i.pid, i.qty, i.recipe, -1));
   db.sales.push(sale);
-  audit('sale', `فاتورة بيع #${sale.no}`, `الإجمالي ${num(total)} — الربح ${num(sale.profit)} — ` + items.map(i => `${i.name} ×${num(i.qty)} بسعر ${num(i.price)}`).join('، '));
+  audit('sale', `فاتورة بيع #${sale.no}`, `الإجمالي ${num(total)} — الربح ${num(sale.profit)} — ` + items.map(i => `${i.name} ×${num(i.qty)} بسعر ${num(i.price)}`).join('، '), areaOfItems(items));
   save();
   cart = []; renderCart();
   beep(true);
@@ -1101,14 +1156,15 @@ async function closeScanner(){
 function renderProducts(){
   const q = ($('#prodSearch').value || '').trim().toLowerCase();
   fillTagSelect('#prodTag'); const tg = $('#prodTag').value;
-  const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg) && matchKind(p, $('#prodKind').value))
+  const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg) && !isCoffee(p))
                           .sort((a,b) => a.name.localeCompare(b.name, 'ar'));
   let cap=0, val=0, exp=0, pcs=0;
-  db.products.forEach(p => { if(p.recipe) return; const qn = Math.max(p.qty,0); cap += p.cost*qn; pcs += qn; if(!p.material){ val += p.price*qn; exp += (p.price-p.cost)*qn; } });
-  $('#prodStats').innerHTML = stat('عدد المنتجات', db.products.length) + stat('عدد القطع بالمخزون', num(pcs)) +
+  const goods = db.products.filter(p => !isCoffee(p));
+  goods.forEach(p => { const qn = Math.max(p.qty,0); cap += p.cost*qn; pcs += qn; if(!p.material){ val += p.price*qn; exp += (p.price-p.cost)*qn; } });
+  $('#prodStats').innerHTML = stat('عدد المنتجات', goods.length) + stat('عدد القطع بالمخزون', num(pcs)) +
     stat('رأس المال (بسعر التكلفة)', money(cap), 'o') + stat('قيمة المخزون (بسعر البيع)', money(val)) + stat('الربح المتوقع', money(exp), 'g');
   const tb = $('#prodBody');
-  if(!list.length){ tb.innerHTML = `<tr><td colspan="11" class="empty">${db.products.length ? 'لا توجد نتائج' : 'لا توجد منتجات بعد — اضغط «إضافة منتج»'}</td></tr>`; return; }
+  if(!list.length){ tb.innerHTML = `<tr><td colspan="11" class="empty">${goods.length ? 'لا توجد نتائج' : 'لا توجد منتجات بعد — اضغط «إضافة منتج»'}</td></tr>`; return; }
   tb.innerHTML = list.map(p => {
     const pr = p.price - p.cost, pct = p.cost > 0 ? pr / p.cost * 100 : 0, qn = Math.max(p.qty,0);
     const isLow = p.qty <= lowOf(p), sells = p.price > 0, dash = '<span class="muted">—</span>';
@@ -1160,12 +1216,15 @@ function openProductModal(id, preset={}){
 let pmKind = 'item';
 const KIND_HINT = {
   item:'منتج عادي يُباع للزبون، له كمية وسعر شراء وسعر بيع.',
-  recipe:'مشروب أو وصفة تُحضّر من المواد الخام — كميته وتكلفته تُحسب من مكوّناته، وبيعه يخصمها.',
-  material:'مادة تُستخدم فقط في تحضير المنتجات المركّبة (كاسات، بن، سكر...) — لا تُباع ولا تظهر في فاتورة البيع.'};
+  recipe:'مشروب من آلة القهوة — تكلفته تُحسب من مكوّناته، وكل كاسة تُباع تخصم موادها تلقائياً.',
+  material:'مادة تُستخدم في آلة القهوة (كاسات، بن، سكر...) — لا تُباع ولا تظهر في فاتورة البيع.'};
 function setKind(k){
   pmKind = k; $('#pIsRecipe').checked = k === 'recipe';
   document.querySelectorAll('#pKind button').forEach(b => b.classList.toggle('active', b.dataset.k === k));
-  $('#pKindHint').textContent = KIND_HINT[k];
+  $('#pKindHint').textContent = k === 'item' ? '' : KIND_HINT[k];
+  $('#pTagsWrap').style.display = k === 'item' ? '' : 'none';
+  const T = {item:['إضافة منتج','تعديل منتج'], recipe:['☕ إضافة مشروب','☕ تعديل مشروب'], material:['🧱 إضافة مادة للآلة','🧱 تعديل مادة للآلة']};
+  $('#pmTitle').textContent = T[k][editingId ? 1 : 0];
   $('#pPriceWrap').style.display = k === 'material' ? 'none' : ''; $('#pPrice').required = k !== 'material';
   toggleRecipeUI();
 }
@@ -1177,8 +1236,8 @@ function toggleRecipeUI(){
   $('#pRecipeWrap').style.display = on ? '' : 'none';
   if(on && !$('#pRecipeRows').children.length) addRecipeRow();
   const hasMats = db.products.some(x => x.material);
-  $('#pRecipeNote').innerHTML = hasMats ? 'المكوّنات تُختار من المواد الخام 🧱 فقط. عند بيع هذا المنتج تُخصم مكوّناته تلقائياً، وتكلفته تُحسب منها.'
-    : '⚠️ لا توجد مواد خام بعد. أضف أولاً من «➕ إضافة منتج» مواد من نوع «🧱 مادة خام»: مثلاً «كاسة كرتون» (الوحدة: قطعة) و«بن» (الوحدة: غرام) مع كمياتها وتكلفتها.';
+  $('#pRecipeNote').innerHTML = hasMats ? 'المكوّنات تُختار من مواد الآلة 🧱. عند بيع كل كاسة تُخصم مكوّناتها تلقائياً، وتكلفتها تُحسب منها.'
+    : '⚠️ لا توجد مواد للآلة بعد. أضف أولاً من صفحة آلة القهوة «➕ مادة للآلة»: مثلاً «كاسة كرتون» (الوحدة: قطعة) و«بن» (الوحدة: غرام) مع كمياتها وتكلفتها.';
   updatePmProfit();
 }
 function materialOptions(sel){
@@ -1253,13 +1312,13 @@ function saveProduct(e){
     const priceChanged = p.price !== price || (!isRecipe && p.cost !== cost);
     Object.assign(p, nw);
     if(priceChanged) pushHistory(p);
-    if(changes.length) audit('product', (priceChanged ? 'تغيير سعر منتج: ' : 'تعديل منتج: ') + name, changes.join('، '));
+    if(changes.length) audit('product', (priceChanged ? 'تغيير سعر: ' : 'تعديل: ') + name, changes.join('، '), pmKind === 'item' ? 'goods' : 'coffee');
   } else {
     p = {id:uid(), name, barcode, cost, price, qty, tags, unit, minQty, recipe, material, created:new Date().toISOString(), history:[]};
     pushHistory(p);
     db.products.push(p);
-    audit('product', (isRecipe ? 'إضافة منتج مركّب: ' : material ? 'إضافة مادة خام: ' : 'إضافة منتج: ') + name,
-      (isRecipe ? `المكوّنات: ${recipeText(recipe)} — التكلفة ${num(cost)}` : `التكلفة ${num(cost)} — الكمية ${num(qty)} ${unit || ''}`) + ` — البيع ${num(price)} — الصنف ${tagNames(tags)}${barcode ? ' — باركود ' + barcode : ''}`);
+    audit('product', (isRecipe ? 'إضافة مشروب: ' : material ? 'إضافة مادة للآلة: ' : 'إضافة منتج: ') + name,
+      (isRecipe ? `المكوّنات: ${recipeText(recipe)} — التكلفة ${num(cost)}` : `التكلفة ${num(cost)} — الكمية ${num(qty)} ${unit || ''}`) + ` — البيع ${num(price)}${isRecipe || material ? '' : ' — الصنف ' + tagNames(tags)}${barcode ? ' — باركود ' + barcode : ''}`, isRecipe || material ? 'coffee' : 'goods');
   }
   save();
   closeModal('prodModal');
@@ -1288,7 +1347,7 @@ function saveRestock(e){
   const priceChanged = cost !== p.cost || price !== p.price;
   p.qty = r4(p.qty + q); p.cost = cost; p.price = price;
   if(priceChanged) pushHistory(p);
-  audit('product', `إضافة كمية (${num(q)}) لـ ${p.name}`, det);
+  audit('product', `إضافة كمية (${num(q)}) لـ ${p.name}`, det, isCoffee(p) ? 'coffee' : 'goods');
   save(); closeModal('restockModal'); rerender(); toast('المخزون الآن: ' + num(p.qty));
 }
 function deleteProduct(id){
@@ -1297,7 +1356,7 @@ function deleteProduct(id){
   if(!confirm(`حذف المنتج "${p.name}"؟\n(الفواتير القديمة تبقى محفوظة)` + (users.length ? `\n\n⚠️ هذه المادة مستخدمة في: ${users.map(x => x.name).join('، ')} — ستُزال من مكوّناتها.` : ''))) return;
   users.forEach(x => x.recipe = x.recipe.filter(r => r.pid !== id));
   db.products = db.products.filter(x => x.id !== id);
-  audit('product', 'حذف منتج: ' + p.name, `الكمية وقت الحذف ${num(p.qty)} — التكلفة ${num(p.cost)} — البيع ${num(p.price)}`);
+  audit('product', 'حذف: ' + p.name, `الكمية وقت الحذف ${num(p.qty)} — التكلفة ${num(p.cost)} — البيع ${num(p.price)}`, isCoffee(p) ? 'coffee' : 'goods');
   save(); rerender();
 }
 
@@ -1314,6 +1373,12 @@ function recipeMakeable(rec){
 }
 function recipeText(rec){ return (rec || []).map(r => { const m = prodById(r.pid); return m ? `${m.name} ×${num(r.qty)} ${unitOf(m)}` : '؟'; }).join('، ') || '—'; }
 const kindOf = p => p.recipe ? 'recipe' : p.material ? 'material' : 'item';
+const isCoffee = p => !!(p && (p.recipe || p.material)); // مشروبات آلة القهوة وموادها — منفصلة عن المنتجات العادية
+function areaOfItems(items){
+  let c = false, g = false;
+  (items || []).forEach(i => { (i.recipe || isCoffee(prodById(i.pid))) ? c = true : g = true; });
+  return c && g ? 'both' : c ? 'coffee' : 'goods';
+}
 const matchKind = (p, k) => !k || kindOf(p) === k;
 function syncRecipes(){ db.products.forEach(p => { if(p.recipe){ p.cost = recipeCost(p.recipe); p.qty = recipeMakeable(p.recipe); } }); }
 // ما يُخصم من المخزون عند بيع كمية: مكوّنات المركّب (حسب وصفته وقت البيع) أو المنتج نفسه
@@ -1339,6 +1404,63 @@ function materialUsage(from, to, onlyMaterials = true){
 }
 function fmtDays(d){ return d == null ? '<span class="muted">—</span>' : d < 1 ? '<b class="neg">أقل من يوم</b>' : `<b class="${d < 7 ? 'neg' : ''}">~${num(Math.round(d))} يوم</b>`; }
 
+/* ===================== آلة القهوة ===================== */
+let cfPeriod = 'month';
+$('#cfTabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]'); if(!b) return;
+  cfPeriod = b.dataset.p;
+  document.querySelectorAll('#cfTabs button').forEach(x => x.classList.toggle('active', x === b));
+  renderCoffee();
+});
+function coffeeMaterials(){
+  const used = new Set(); db.products.forEach(p => (p.recipe || []).forEach(r => used.add(r.pid)));
+  return db.products.filter(p => !p.recipe && (p.material || used.has(p.id))).sort((a,b) => a.name.localeCompare(b.name,'ar'));
+}
+function coffeeSales(from, to){
+  const r = {total:0, profit:0, cups:0, by:{}};
+  salesBetween(from, to).forEach(s => s.items.forEach(i => {
+    if(!(i.recipe || isCoffee(prodById(i.pid)))) return;
+    r.total += i.price * i.qty; r.profit += (i.price - i.cost) * i.qty; r.cups += i.qty;
+    r.by[i.pid] = (r.by[i.pid] || 0) + i.qty;
+  }));
+  return r;
+}
+function renderCoffee(){
+  const now = new Date(), today = startOfDay(now), tomorrow = addDays(today, 1);
+  const t = coffeeSales(today, tomorrow), m = coffeeSales(startOfMonth(now), tomorrow);
+  const drinks = db.products.filter(p => p.recipe).sort((a,b) => a.name.localeCompare(b.name,'ar')), mats = coffeeMaterials();
+  const matVal = mats.reduce((a,p) => a + p.cost * Math.max(p.qty,0), 0);
+  $('#cfStats').innerHTML = stat('مبيعات القهوة اليوم', money(t.total), '', `${num(t.cups)} كاسة`) + stat('ربح القهوة اليوم', money(t.profit), 'g') +
+    stat('مبيعات الشهر', money(m.total), '', `${num(m.cups)} كاسة`) + stat('ربح الشهر', money(m.profit), 'g') + stat('قيمة مواد الآلة', money(matVal), 'o');
+  $('#cfDrinks').innerHTML = drinks.length ? drinks.map(p => { const pr = p.price - p.cost, low = p.qty <= lowOf(p);
+    return `<tr class="${low ? 'low' : ''}"><td><b>${esc(p.name)}</b><div class="muted small">${esc(p.barcode || 'بدون باركود')}</div></td>
+      <td class="small">${esc(recipeText(p.recipe))}</td><td>${money(p.cost)}</td><td>${money(p.price)}</td>
+      <td class="${pcls(pr)}">${money(pr)} <span class="muted small">(${p.cost > 0 ? num(pr / p.cost * 100) : 0}%)</span></td>
+      <td><b>${num(p.qty)}</b> كاسة ${low ? '<span class="badge">قليل</span>' : ''}</td><td>${num(m.by[p.id] || 0)}</td>
+      <td style="white-space:nowrap"><button class="btn-icon" title="تعديل" onclick="openProductModal('${p.id}')">✏️</button>
+        <button class="btn-icon danger" title="حذف" onclick="deleteProduct('${p.id}')">🗑</button></td></tr>`; }).join('')
+    : '<tr><td colspan="8" class="empty">لا توجد مشروبات بعد — أضف المواد أولاً («➕ مادة للآلة») ثم «➕ مشروب» واختر مكوّناته</td></tr>';
+  const use30 = {}; materialUsage(addDays(today, -29), tomorrow).forEach(x => use30[x.m.id] = x);
+  const useM = {}; materialUsage(startOfMonth(now), tomorrow).forEach(x => useM[x.m.id] = x.used);
+  $('#cfMats').innerHTML = mats.length ? mats.map(p => { const low = p.qty <= lowOf(p);
+    return `<tr class="${low ? 'low' : ''}"><td><b>${esc(p.name)}</b></td>
+      <td><b>${num(p.qty)}</b> ${esc(unitOf(p))} ${low ? '<span class="badge">قليل</span>' : ''}</td><td>${money(p.cost)}</td><td>${money(p.cost * Math.max(p.qty,0))}</td>
+      <td>${num(useM[p.id] || 0)} ${esc(unitOf(p))}</td><td>${fmtDays(use30[p.id] ? use30[p.id].days : null)}</td>
+      <td style="white-space:nowrap"><button class="btn-icon" title="إضافة كمية" onclick="openRestock('${p.id}')">➕</button>
+        <button class="btn-icon" title="تعديل / جرد" onclick="openProductModal('${p.id}')">✏️</button>
+        <button class="btn-icon danger" title="حذف" onclick="deleteProduct('${p.id}')">🗑</button></td></tr>`; }).join('')
+    : '<tr><td colspan="7" class="empty">لا توجد مواد بعد — اضغط «➕ مادة للآلة» وأضف مثلاً: كاسة كرتون (قطعة)، بن (غرام)، سكر (غرام)</td></tr>';
+  $('#cfMatsFoot').innerHTML = mats.length ? `<tr><td colspan="3">المجموع</td><td>${money(matVal)}</td><td colspan="3"></td></tr>` : '';
+  const [from, to] = periodRange(cfPeriod);
+  const mu = materialUsage(from, to).sort((a,b) => b.cost - a.cost);
+  $('#cfUse').innerHTML = mu.length ? mu.map(x => `<tr><td><b>${esc(x.m.name)}</b></td><td>${num(x.used)} ${esc(unitOf(x.m))}</td><td>${money(x.cost)}</td>
+      <td>${num(x.daily)} ${esc(unitOf(x.m))}</td><td>${num(x.left)} ${esc(unitOf(x.m))}</td><td>${fmtDays(x.days)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">لا يوجد استهلاك بعد</td></tr>';
+  const log = db.audit.filter(a => areaMatch(a, 'coffee')).slice(-15).reverse();
+  $('#cfLog').innerHTML = log.length ? log.map(a => `<tr><td class="small" style="white-space:nowrap">${fmtDateTime(a.t)}</td><td><span class="tag ${a.type}">${AUDIT_TYPES[a.type] || a.type}</span></td><td><b>${esc(a.msg)}</b><div class="small muted">${esc(a.details)}</div></td></tr>`).join('')
+    : '<tr><td class="empty">لا توجد عمليات بعد</td></tr>';
+}
+
 /* ===================== الأصناف ===================== */
 const TAG_COLORS = ['#2f6fed','#15935a','#d33f3f','#e08a12','#7a4fd6','#0e9aa7','#c2417a','#6b7a1f','#8a5a2b','#4b5563'];
 const tagById = id => db.tags.find(t => t.id === id);
@@ -1358,23 +1480,23 @@ function createTag(name){
   let t = db.tags.find(x => x.name === name); if(t) return t;
   t = {id:uid(), name, color:TAG_COLORS[db.tags.length % TAG_COLORS.length]};
   db.tags.push(t);
-  audit('product', 'إضافة صنف: ' + name);
+  audit('product', 'إضافة صنف: ' + name, '', 'goods');
   return t;
 }
 function tagStats(salesList){
   const m = {}, get = (id, name, color) => m[id] || (m[id] = {id, name, color, qty:0, revenue:0, profit:0});
   salesList.forEach(s => s.items.forEach(i => {
     const p = db.products.find(x => x.id === i.pid), ts = p ? productTags(p) : [];
-    const buckets = ts.length ? ts.map(t => get(t.id, t.name, t.color)) : [get('__none', 'بدون صنف', '#8a93a6')];
+    const buckets = (i.recipe || isCoffee(p)) ? [get('__coffee', '☕ القهوة', '#8a5a2b')] : ts.length ? ts.map(t => get(t.id, t.name, t.color)) : [get('__none', 'بدون صنف', '#8a93a6')];
     buckets.forEach(o => { o.qty += i.qty; o.revenue += i.price*i.qty; o.profit += (i.price-i.cost)*i.qty; });
   }));
   return Object.values(m);
 }
 function renderTags(){
   const now = new Date(), month = tagStats(salesBetween(startOfMonth(now), addDays(startOfDay(now),1)));
-  const cards = [...sortedTags().map(t => ({...t, real:true})), ...(db.products.some(p => !productTags(p).length) ? [{id:'__none', name:'بدون صنف', color:'#8a93a6'}] : [])];
+  const cards = [...sortedTags().map(t => ({...t, real:true})), ...(db.products.some(p => !isCoffee(p) && !productTags(p).length) ? [{id:'__none', name:'بدون صنف', color:'#8a93a6'}] : [])];
   $('#tagGrid').innerHTML = cards.length ? cards.map(t => {
-    const ps = db.products.filter(p => matchTag(p, t.id)), ms = month.find(x => x.id === t.id) || {qty:0, revenue:0, profit:0};
+    const ps = db.products.filter(p => !isCoffee(p) && matchTag(p, t.id)), ms = month.find(x => x.id === t.id) || {qty:0, revenue:0, profit:0};
     const pcs = ps.reduce((a,p)=>a+(p.recipe ? 0 : Math.max(p.qty,0)),0), cap = ps.reduce((a,p)=>a+stockVal(p),0);
     const out = ps.filter(p => p.qty <= 0).length, low = ps.filter(p => p.qty > 0 && p.qty <= lowOf(p)).length;
     return `<div class="cat" style="--c:${t.color}">
@@ -1406,7 +1528,7 @@ function renameTag(id){
   const t = tagById(id), n = (prompt('الاسم الجديد للصنف:', t.name) || '').trim();
   if(!n || n === t.name) return;
   if(db.tags.some(x => x.name === n && x.id !== id)) return alert('يوجد صنف بهذا الاسم');
-  audit('product', 'إعادة تسمية صنف', `من ${t.name} إلى ${n}`);
+  audit('product', 'إعادة تسمية صنف', `من ${t.name} إلى ${n}`, 'goods');
   t.name = n; save(); renderTags();
 }
 function recolorTag(id){ const t = tagById(id); t.color = TAG_COLORS[(TAG_COLORS.indexOf(t.color) + 1) % TAG_COLORS.length]; save(); renderTags(); }
@@ -1415,7 +1537,7 @@ function deleteTag(id){
   if(!confirm(`حذف الصنف "${t.name}"؟\n${n ? `سيُزال من ${n} منتج (المنتجات نفسها لا تُحذف).` : ''}`)) return;
   db.products.forEach(p => { if(p.tags) p.tags = p.tags.filter(x => x !== id); });
   db.tags = db.tags.filter(x => x.id !== id);
-  audit('product', 'حذف صنف: ' + t.name, n ? `أُزيل من ${n} منتج` : '');
+  audit('product', 'حذف صنف: ' + t.name, n ? `أُزيل من ${n} منتج` : '', 'goods');
   save(); renderTags();
 }
 
@@ -1430,7 +1552,7 @@ function stockData(){
     if(!last[c.pid] || d > last[c.pid]) last[c.pid] = d;
     if(d >= mStart) sold[c.pid] = (sold[c.pid] || 0) + c.qty;
   })); });
-  const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg) && matchKind(p, $('#stKind').value) && (!st || stockStatus(p) === st));
+  const list = db.products.filter(p => (!q || p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q)) && matchTag(p, tg) && !isCoffee(p) && (!st || stockStatus(p) === st));
   const today = startOfDay(new Date()), left = {};
   materialUsage(addDays(today, -29), addDays(today, 1), false).forEach(x => left[x.m.id] = x.days); // حسب استهلاك آخر 30 يوم
   const dl = p => left[p.id] == null ? 1e9 : left[p.id];
@@ -1564,7 +1686,7 @@ function savePurchase(){
   db.purchases.push(pu);
   audit('purchase', `فاتورة شراء #${pu.no} — ثمن ${purchaseLabel(pu)}`,
     `الإجمالي ${num(total)} — ${payText(pu)}${pu.supplier ? ' — المورد ' + pu.supplier : ''} — ` +
-    items.map(i => `${i.name} ×${num(i.qty)} ${i.unit} بتكلفة ${num(i.cost)}${i.cost !== i.oldCost ? ' (كانت ' + num(i.oldCost) + ')' : ''}`).join('، '));
+    items.map(i => `${i.name} ×${num(i.qty)} ${i.unit} بتكلفة ${num(i.cost)}${i.cost !== i.oldCost ? ' (كانت ' + num(i.oldCost) + ')' : ''}`).join('، '), areaOfItems(items));
   save(); beep(true);
   pcart = []; $('#puSupplier').value = ''; $('#puNote').value = ''; $('#puDown').value = ''; setPuPay('box');
   renderPurchase();
@@ -1597,7 +1719,7 @@ function deletePurchase(id){
   if(!confirm(`حذف فاتورة الشراء #${x.no}؟\nستُخصم كمياتها من المخزون${boxPaidOf(x) ? ' ويُعاد ' + num(boxPaidOf(x)) + ' إلى الصندوق' : ''}${debtOf(x) ? ' ويُلغى دينها ' + num(debtOf(x)) + ' للمورد ' + (x.supplier || '') : ''}.\n(أسعار التكلفة لا ترجع تلقائياً)`)) return;
   x.items.forEach(i => { const p = prodById(i.pid); if(p && !p.recipe) p.qty = r4(p.qty - i.qty); });
   db.purchases = db.purchases.filter(y => y.id !== id);
-  audit('purchase', `حذف فاتورة شراء #${x.no}`, `الإجمالي ${num(x.total)} — ${payText(x)} (أُلغي) — خُصمت الكميات: ` + x.items.map(i => `${i.name} ×${num(i.qty)}`).join('، '));
+  audit('purchase', `حذف فاتورة شراء #${x.no}`, `الإجمالي ${num(x.total)} — ${payText(x)} (أُلغي) — خُصمت الكميات: ` + x.items.map(i => `${i.name} ×${num(i.qty)}`).join('، '), areaOfItems(x.items));
   save(); renderPurchase(); toast('تم حذف فاتورة الشراء');
 }
 
@@ -1923,7 +2045,7 @@ function deleteInvoice(id){
   if(!confirm(`حذف الفاتورة #${s.no}؟\nسيتم إرجاع الكميات إلى المخزون.`)) return;
   s.items.forEach(i => applyStock(i.pid, i.qty, i.recipe, +1));
   db.sales = db.sales.filter(x => x.id !== id);
-  audit('sale', `حذف فاتورة #${s.no}`, `الإجمالي ${num(s.total)} — الربح ${num(s.profit)} — أُعيدت الكميات: ` + s.items.map(i => `${i.name} ×${num(i.qty)}`).join('، '));
+  audit('sale', `حذف فاتورة #${s.no}`, `الإجمالي ${num(s.total)} — الربح ${num(s.profit)} — أُعيدت الكميات: ` + s.items.map(i => `${i.name} ×${num(i.qty)}`).join('، '), areaOfItems(s.items));
   save(); renderInvoices(); toast('تم حذف الفاتورة');
 }
 
@@ -1973,12 +2095,8 @@ function renderJard(){
     : '<tr><td colspan="6" class="empty">لا توجد مبيعات في هذه الفترة</td></tr>';
   $('#jardSalesFoot').innerHTML = ps.length ? `<tr><td></td><td>المجموع</td><td>${num(sum.items)}</td><td>${money(sum.total)}</td><td>${money(sum.cost)}</td><td>${money(sum.profit)}</td></tr>` : '';
 
-  const mu = materialUsage(from, to).sort((a,b) => b.cost - a.cost);
-  $('#jardUse').innerHTML = mu.length ? mu.map(x => `<tr><td><b>${esc(x.m.name)}</b></td><td>${num(x.used)} ${esc(unitOf(x.m))}</td><td>${money(x.cost)}</td>
-      <td>${num(x.daily)} ${esc(unitOf(x.m))}</td><td>${num(x.left)} ${esc(unitOf(x.m))}</td><td>${fmtDays(x.days)}</td></tr>`).join('')
-    : '<tr><td colspan="6" class="empty">لا توجد منتجات مركّبة بعد — عرّف المشروب كمنتج مركّب من نافذة المنتج لتظهر هنا كاساته وبنّه</td></tr>';
   fillTagSelect('#jTag');
-  const prods = db.products.filter(p => !p.recipe && matchTag(p, $('#jTag').value)).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const prods = db.products.filter(p => !isCoffee(p) && matchTag(p, $('#jTag').value)).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   $('#jardStock').innerHTML = prods.length ? prods.map(p => `<tr>
       <td>${esc(p.name)}</td><td>${num(p.qty)}</td><td>${money(p.cost)}</td><td>${money(stockVal(p))}</td>
       <td><input type="number" step="any" inputmode="decimal" class="inp-sm count-inp" data-id="${p.id}" oninput="countDiff(this)"></td><td class="diff"></td></tr>`).join('')
@@ -2006,12 +2124,12 @@ function applyCount(){
     p.qty = nq;
   });
   db.lastCount = new Date().toISOString();
-  audit('stock', `اعتماد جرد فعلي (${changes.length} منتج)`, (det.length ? det.join('، ') + ` — قيمة الفرق ${num(val)}` : 'كل الكميات مطابقة'));
+  audit('stock', `اعتماد جرد فعلي (${changes.length} منتج)`, (det.length ? det.join('، ') + ` — قيمة الفرق ${num(val)}` : 'كل الكميات مطابقة'), 'goods');
   save(); renderJard(); toast('✔ تم اعتماد الجرد');
 }
 function printJard(){
   const {from, to, label, sum, ps} = jardData();
-  const prods = db.products.filter(p => !p.recipe).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const prods = db.products.filter(p => !isCoffee(p)).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   const capital = prods.reduce((a,p)=>a+stockVal(p),0);
   printHTML(`<h2 style="text-align:center">${esc(db.settings.shopName)} — تقرير الجرد (${label})</h2>
     <p style="text-align:center">من ${fmtDate(from)} إلى ${fmtDate(addDays(to,-1))} — ${fmtDateTime(new Date())}</p>
@@ -2029,9 +2147,19 @@ function printJard(){
 /* ===================== سجل العمليات ===================== */
 let auLimit = 300;
 $('#auType').innerHTML = '<option value="">كل الأقسام</option>' + Object.entries(AUDIT_TYPES).map(([k,v]) => `<option value="${k}">${v}</option>`).join('');
+// السجلات القديمة (قبل إضافة التمييز) تُصنّف من نوعها وأسماء مشروبات/مواد القهوة فيها
+function auditArea(a){
+  if(a.area) return a.area;
+  if(!['product','sale','purchase','stock'].includes(a.type)) return 'general';
+  const txt = a.msg + ' ' + a.details;
+  return db.products.some(p => isCoffee(p) && txt.includes(p.name)) ? 'coffee' : 'goods';
+}
+const areaMatch = (a, ar) => !ar || auditArea(a) === ar || (auditArea(a) === 'both' && ar !== 'general');
+const AREA_ICON = {coffee:'☕ ', both:'☕📦 ', goods:'', general:''};
+function goAudit(area){ $('#auArea').value = area; ['#auType','#auFrom','#auTo','#auSearch'].forEach(x => $(x).value = ''); showTab('audit'); }
 function auditFiltered(){
-  const type = $('#auType').value, from = $('#auFrom').value, to = $('#auTo').value, q = $('#auSearch').value.trim().toLowerCase();
-  return db.audit.filter(a => (!type || a.type === type) && (!from || dayKey(a.t) >= from) && (!to || dayKey(a.t) <= to)
+  const type = $('#auType').value, from = $('#auFrom').value, to = $('#auTo').value, q = $('#auSearch').value.trim().toLowerCase(), ar = $('#auArea').value;
+  return db.audit.filter(a => (!type || a.type === type) && areaMatch(a, ar) && (!from || dayKey(a.t) >= from) && (!to || dayKey(a.t) <= to)
     && (!q || (a.msg + ' ' + a.details).toLowerCase().includes(q))).reverse();
 }
 function renderAudit(reset){
@@ -2040,7 +2168,7 @@ function renderAudit(reset){
   $('#auBody').innerHTML = list.length ? list.slice(0, auLimit).map(a => `<tr>
       <td class="small" style="white-space:nowrap">${fmtDateTime(a.t)}</td>
       <td><span class="tag ${a.type}">${AUDIT_TYPES[a.type] || a.type}</span></td>
-      <td><b>${esc(a.msg)}</b></td><td class="small muted">${esc(a.details)}</td></tr>`).join('')
+      <td><b>${AREA_ICON[auditArea(a)] || ''}${esc(a.msg)}</b></td><td class="small muted">${esc(a.details)}</td></tr>`).join('')
     : '<tr><td colspan="4" class="empty">لا توجد عمليات مسجلة</td></tr>';
   $('#auMore').innerHTML = list.length > auLimit ? `<button class="btn" onclick="auLimit+=300;renderAudit()">عرض المزيد (${list.length - auLimit} متبقية)</button>` : `<span class="muted small">${list.length} عملية</span>`;
 }
